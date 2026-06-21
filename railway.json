@@ -5,8 +5,7 @@
   },
   "deploy": {
     "numReplicas": 1,
-    "startCommand": "",
-    "healthcheckPath": "/login.php",
-    "restartPolicyType": "ON_FAILURE"
+    "healthcheckPath": "/health.php",
+    "restartPolicyType": "NEVER"
   }
 }
