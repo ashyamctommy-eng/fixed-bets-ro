@@ -4,14 +4,16 @@
 // FIXED BETS RO 🇷🇴
 // ============================================================
 
-// Site URL — auto-detect Railway domain, fallback to env or local
-$railwayDomain = getenv('RAILWAY_PUBLIC_DOMAIN');
-if ($railwayDomain) {
-    define('SITE_URL', 'https://' . $railwayDomain);
+// Site URL — auto-detect from the server request, Railway, or env
+if (getenv('RAILWAY_PUBLIC_DOMAIN')) {
+    define('SITE_URL', 'https://' . getenv('RAILWAY_PUBLIC_DOMAIN'));
 } elseif (getenv('SITE_URL')) {
     define('SITE_URL', getenv('SITE_URL'));
+} elseif (isset($_SERVER['HTTP_HOST'])) {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    define('SITE_URL', $protocol . '://' . $_SERVER['HTTP_HOST']);
 } else {
-    define('SITE_URL', 'http://localhost:8000');
+    define('SITE_URL', 'http://localhost');
 }
 
 define('SITE_NAME', 'FIXED BETS RO 🇷🇴');
@@ -29,9 +31,8 @@ define('HASH_COST', 10);
 // Timezone
 date_default_timezone_set('Europe/Bucharest');
 
-// Error reporting — disable in production
-$isRailway = (bool) getenv('RAILWAY_PUBLIC_DOMAIN');
-if ($isRailway) {
+// Error reporting — quiet on Railway, visible elsewhere
+if (getenv('RAILWAY_PUBLIC_DOMAIN')) {
     error_reporting(0);
     ini_set('display_errors', 0);
 } else {
@@ -41,10 +42,11 @@ if ($isRailway) {
 
 // Start session
 if (session_status() === PHP_SESSION_NONE) {
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     session_set_cookie_params([
         'lifetime' => SESSION_LIFETIME,
         'path'     => '/',
-        'secure'   => $isRailway,       // HTTPS on Railway
+        'secure'   => $isSecure,
         'httponly' => true,
         'samesite' => 'Strict',
     ]);

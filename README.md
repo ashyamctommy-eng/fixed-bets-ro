@@ -24,22 +24,63 @@ A complete VIP betting platform where all user accounts are created and managed 
 
 ## Installation
 
-### Quick Install (Recommended)
-1. Upload all files to your web server
-2. Navigate to `http://yoursite.com/install.php`
-3. Fill in database and admin details
-4. Click "Install Now"
-5. **Delete install.php after installation!**
+### 🚀 InfinityFree Deploy (Free — 5 minutes)
 
-### Manual Install
+**Step 1 — Create Account**
+- Go to [infinityfree.com](https://infinityfree.com) and sign up
+- Verify your email, log into the control panel
+
+**Step 2 — Create MySQL Database**
+- In the control panel → **MySQL Databases**
+- Click **"Create Database"**
+- Enter a name (e.g. `fixed_bets_ro`)
+- Set a **password** and note it down
+- Once created, click **"Details"** — you'll see:
+  - **Host:** `sqlNNN.infinityfree.com`
+  - **Database Name:** `epiz_NNNNN_fixed_bets_ro`
+  - **Username:** `epiz_NNNNN`
+
+**Step 3 — Update config/database.php**
+- Open `config/database.php` in a text editor
+- Scroll to the **MANUAL CONFIG** section
+- Replace the placeholder values with your InfinityFree MySQL details from Step 2
+
+**Step 4 — Upload Files**
+- In the InfinityFree control panel → **File Manager**
+- Navigate to `htdocs/`
+- Upload the ZIP file → **Extract**
+
+Or use **FTP** (FileZilla):
+- FTP Host: `ftp.infinityfree.com`
+- Username: your InfinityFree username
+- Password: your InfinityFree password
+- Upload all files to `htdocs/`
+
+**Step 5 — Import Database**
+- Control panel → **phpMyAdmin**
+- Select your database
+- Click **Import** → Choose File → select `sql/schema.sql`
+- Click **Go**
+
+**Step 6 — Login**
+- Visit `https://your-site.infinityfreeapp.com`
+- **Username:** `admin`
+- **Password:** `Admin@123`
+- **Change password immediately** in Admin → Settings
+
+### ⚡ Install.php (Alternative)
+1. Upload all files except `config/database.php`
+2. Visit `http://yoursite.com/install.php`
+3. Fill in DB details + admin password
+4. Click **Install Now**
+5. **Delete install.php** after completion
+
+### 📦 cPanel Hosting (Manual)
 1. Upload all files to your web server
-2. Create a MySQL database
-3. Import `sql/schema.sql` into your database
-4. Edit `config/database.php` with your database credentials
-5. Edit `config/config.php` with your site URL
-6. Access `admin/index.php` and login with:
-   - Username: `admin`
-   - Password: `Admin@123`
+2. Create a MySQL database in cPanel
+3. Import `sql/schema.sql` via phpMyAdmin
+4. Edit `config/database.php` with your DB credentials
+5. Login at `/admin/index.php` with `admin` / `Admin@123`
 
 ## Security
 - All passwords hashed with bcrypt

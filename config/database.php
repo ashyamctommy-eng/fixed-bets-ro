@@ -3,32 +3,29 @@
 // DATABASE CONFIGURATION
 // FIXED BETS RO 🇷🇴
 // ============================================================
-// Supports:
-//   - Manual constants (fallback)
-//   - Railway MySQL env vars (MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE)
-//   - Generic DATABASE_URL (JAWSDB, CLEARDB, etc.)
+//
+// 👇 FOR INFINITYFREE — Edit the "MANUAL CONFIG" section below
+//    with the MySQL details from your control panel.
+//
+//    Host format: sqlNNN.infinityfree.com
+//    DB Name format: epiz_NNNNN_fixed_bets_ro
+//
 // ============================================================
 
-// --- Railway MySQL ---
+// --- Railway MySQL (auto) ---
 $railwayHost = getenv('MYSQLHOST') ?: null;
-$railwayPort = getenv('MYSQLPORT') ?: '3306';
-$railwayUser = getenv('MYSQLUSER') ?: null;
-$railwayPass = getenv('MYSQLPASSWORD') ?: null;
-$railwayDb   = getenv('MYSQLDATABASE') ?: null;
 
-// --- Generic DATABASE_URL (e.g. JAWSDB, CLEARDB) ---
+// --- Generic DATABASE_URL (auto) ---
 $dbUrl = getenv('DATABASE_URL') ?: null;
 
-if ($railwayHost && $railwayUser && $railwayDb) {
-    // Railway MySQL plugin
-    define('DB_HOST', $railwayHost);
-    define('DB_PORT', $railwayPort);
-    define('DB_NAME', $railwayDb);
-    define('DB_USER', $railwayUser);
-    define('DB_PASS', $railwayPass ?? '');
+if ($railwayHost) {
+    define('DB_HOST', getenv('MYSQLHOST'));
+    define('DB_PORT', getenv('MYSQLPORT') ?: '3306');
+    define('DB_NAME', getenv('MYSQLDATABASE'));
+    define('DB_USER', getenv('MYSQLUSER'));
+    define('DB_PASS', getenv('MYSQLPASSWORD') ?: '');
     define('DB_CHARSET', 'utf8mb4');
 } elseif ($dbUrl) {
-    // Generic DATABASE_URL: mysql://user:pass@host:port/dbname
     $parts = parse_url($dbUrl);
     define('DB_HOST', $parts['host'] ?? 'localhost');
     define('DB_PORT', $parts['port'] ?? '3306');
@@ -37,13 +34,19 @@ if ($railwayHost && $railwayUser && $railwayDb) {
     define('DB_PASS', $parts['pass'] ?? '');
     define('DB_CHARSET', 'utf8mb4');
 } else {
-    // Manual fallback
-    define('DB_HOST', 'localhost');
-    define('DB_PORT', '3306');
-    define('DB_NAME', 'fixed_bets_ro');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
+    // ============================================================
+    // 🔧 MANUAL CONFIG — EDIT THESE FOR INFINITYFREE
+    // ============================================================
+    // Get these values from your InfinityFree control panel:
+    //   MySQL Databases → (your database) → Details
+    // ============================================================
+    define('DB_HOST', 'sql123.infinityfree.com');   // ← Change to your MySQL host
+    define('DB_PORT', '3306');                       // ← Usually 3306
+    define('DB_NAME', 'epiz_NNNNN_fixed_bets_ro');  // ← Change to your DB name
+    define('DB_USER', 'epiz_NNNNN');                 // ← Change to your DB username
+    define('DB_PASS', 'your_password_here');         // ← Change to your DB password
     define('DB_CHARSET', 'utf8mb4');
+    // ============================================================
 }
 
 try {
@@ -58,6 +61,5 @@ try {
         ]
     );
 } catch (PDOException $e) {
-    // On Railway the DB may not be ready yet during build — fail gracefully
-    die("Database connection failed: " . $e->getMessage());
+    die("Database connection failed. Check your config/database.php settings.<br>" . $e->getMessage());
 }
