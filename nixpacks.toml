@@ -1,0 +1,40 @@
+# ============================================================
+# Nixpacks Configuration — Railway PHP Deployment
+# FIXED BETS RO 🇷🇴
+# ============================================================
+
+# Use PHP 8.2 with Apache (Nixpacks default for PHP)
+providers = ["php"]
+
+[php]
+# PHP version
+version = "8.2"
+
+# Extensions required by the app
+extensions = [
+  "pdo",
+  "pdo_mysql",
+  "mbstring",
+  "session",
+  "json",
+  "ctype",
+]
+
+# Apache rewrite module (for .htaccess)
+ini = """
+  display_errors = Off
+  error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+  date.timezone = Europe/Bucharest
+  session.save_handler = files
+  session.use_strict_mode = 1
+  session.use_only_cookies = 1
+  session.cookie_httponly = 1
+"""
+
+[nixpacks]
+# No build step needed — pure PHP files
+# Don't fail if there's no lockfile or composer.json
+no_npm = true
+no_yarn = true
+no_pnpm = true
+no_composer = true
