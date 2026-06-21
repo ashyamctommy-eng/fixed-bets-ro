@@ -1,12 +1,15 @@
 # ============================================================
 # DOCKERFILE — FIXED BETS RO 🇷🇴
-# PHP 8.2 + Apache + MySQL
+# PHP 8.2 + Apache + MySQL for Railway
 # ============================================================
 
 FROM php:8.2-apache
 
 # Enable Apache rewrite
 RUN a2enmod rewrite
+
+# Fix MPM conflict: only prefork works with mod_php
+RUN a2dismod mpm_event mpm_worker 2>/dev/null; a2enmod mpm_prefork; exit 0
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql
@@ -23,8 +26,11 @@ RUN echo "date.timezone = Europe/Bucharest" > /usr/local/etc/php/conf.d/fixedbet
  && echo "session.use_only_cookies = 1" >> /usr/local/etc/php/conf.d/fixedbets.ini \
  && echo "session.cookie_httponly = 1" >> /usr/local/etc/php/conf.d/fixedbets.ini
 
-# Expose port
-EXPOSE 80
+# Make start script executable
+RUN chmod +x /var/www/html/start.sh
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Expose port
+EXPOSE 8080
+
+# Start with our wrapper
+CMD ["/var/www/html/start.sh"]
