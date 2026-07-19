@@ -12,7 +12,10 @@
     <?php endforeach; endif; ?>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇷🇴</text></svg>">
 </head>
-<body>
+<?php
+$themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
+?>
+<body class="theme-<?= e($themeClass) ?>">
 <div class="dashboard-wrapper">
     <!-- User Top Navigation -->
     <header class="dash-topbar">

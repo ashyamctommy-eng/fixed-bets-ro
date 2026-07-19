@@ -29,6 +29,13 @@
     --shadow: 0 4px 20px rgba(0,0,0,0.3);
     --shadow-gold: 0 4px 20px rgba(255,215,0,0.15);
     --transition: all 0.3s ease;
+    --bg-sidebar: #0d0d14;
+    --bg-topbar: #0d0d14;
+    --bg-welcome: linear-gradient(135deg, #1a1a24 0%, #0d0d14 100%);
+    --bg-footer: #050508;
+    --bg-nav-active: rgba(255, 215, 0, 0.1);
+    --bg-nav-hover: rgba(255, 215, 0, 0.05);
+    --btn-primary-text: #111111;
 }
 
 /* --- Reset & Base --- */
@@ -99,14 +106,14 @@ img {
 
 .btn-primary {
     background: var(--gold-gradient);
-    color: #111;
+    color: var(--btn-primary-text);
     box-shadow: 0 4px 15px rgba(255,215,0,0.3);
 }
 
 .btn-primary:hover {
     box-shadow: 0 6px 25px rgba(255,215,0,0.5);
     transform: translateY(-2px);
-    color: #111;
+    color: var(--btn-primary-text);
 }
 
 .btn-danger {
@@ -501,7 +508,7 @@ img {
 .landing-footer {
     text-align: center;
     padding: 2rem;
-    background: #050508;
+    background: var(--bg-footer);
     border-top: 1px solid var(--border-color);
 }
 
@@ -611,7 +618,7 @@ img {
 .site-footer {
     text-align: center;
     padding: 1.5rem;
-    background: #050508;
+    background: var(--bg-footer);
     border-top: 1px solid var(--border-color);
     margin-top: auto;
 }
@@ -671,4 +678,134 @@ img {
     .hero-links .btn {
         width: 100%;
     }
+}
+
+/* ============================================================
+   THEME SYSTEM OVERRIDES
+   ============================================================ */
+
+/* --- Dark Gold Theme (🏆 Dark Gold - Default) --- */
+body.theme-dark {
+    /* Fallback values are already on :root */
+}
+
+/* --- Light Theme (☀️ Modern Light) --- */
+body.theme-light {
+    --bg-dark: #f3f4f6;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f9fafb;
+    --bg-input: #f9fafb;
+    --bg-surface: #ffffff;
+    --border-color: #e5e7eb;
+    --border-light: #f3f4f6;
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --gold: #d97706; /* Rich warm amber/bronze */
+    --gold-dark: #b45309;
+    --gold-light: #f59e0b;
+    --gold-gradient: linear-gradient(135deg, #f59e0b, #d97706);
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --shadow-gold: 0 4px 20px rgba(217, 119, 6, 0.08);
+    --bg-sidebar: #ffffff;
+    --bg-topbar: #ffffff;
+    --bg-welcome: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+    --bg-footer: #e5e7eb;
+    --bg-nav-active: rgba(217, 119, 6, 0.08);
+    --bg-nav-hover: rgba(217, 119, 6, 0.04);
+    --btn-primary-text: #ffffff;
+}
+
+body.theme-light .hero,
+body.theme-light .login-page {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+}
+
+body.theme-light .hero-overlay {
+    background:
+        radial-gradient(circle at 20% 50%, rgba(217, 119, 6, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(217, 119, 6, 0.01) 0%, transparent 50%);
+}
+
+body.theme-light .hero-badge {
+    background: rgba(217, 119, 6, 0.06);
+    border-color: rgba(217, 119, 6, 0.15);
+}
+
+body.theme-light .sidebar-toggle,
+body.theme-light .mobile-menu-btn,
+body.theme-light .modal-close {
+    color: #4b5563;
+}
+
+body.theme-light .notif-item.unread {
+    background: rgba(217, 119, 6, 0.03);
+}
+
+body.theme-light .game-notes {
+    background: #f9fafb;
+}
+
+body.theme-light .result-item:hover,
+body.theme-light .notif-item:hover {
+    background: #f9fafb;
+}
+
+/* --- Cyber Neon Theme (🧪 Cyber Emerald) --- */
+body.theme-neon {
+    --bg-dark: #04060f;
+    --bg-card: #080c1e;
+    --bg-card-hover: #0d1430;
+    --bg-input: #0d1430;
+    --bg-surface: #0a0f26;
+    --border-color: #151d45;
+    --border-light: #1e2960;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --gold: #00f2fe; /* vibrant neon cyan */
+    --gold-dark: #00a8cc;
+    --gold-light: #4facfe;
+    --gold-gradient: linear-gradient(135deg, #00f2fe, #10b981); /* Cyan to Cyber Emerald gradient */
+    --success: #10b981;
+    --danger: #f43f5e;
+    --warning: #fbbf24;
+    --info: #06b6d4;
+    --shadow: 0 4px 20px rgba(0, 242, 254, 0.15);
+    --shadow-gold: 0 4px 20px rgba(16, 185, 129, 0.25);
+    --bg-sidebar: #04060f;
+    --bg-topbar: #04060f;
+    --bg-welcome: linear-gradient(135deg, #080c1e 0%, #04060f 100%);
+    --bg-footer: #020308;
+    --bg-nav-active: rgba(0, 242, 254, 0.12);
+    --bg-nav-hover: rgba(0, 242, 254, 0.06);
+    --btn-primary-text: #04060f;
+}
+
+body.theme-neon .hero,
+body.theme-neon .login-page {
+    background: linear-gradient(135deg, #04060f 0%, #0a0f26 50%, #04060f 100%);
+}
+
+body.theme-neon .hero-overlay {
+    background:
+        radial-gradient(circle at 20% 50%, rgba(0, 242, 254, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+}
+
+body.theme-neon .hero-badge {
+    background: rgba(0, 242, 254, 0.1);
+    border-color: rgba(0, 242, 254, 0.2);
+}
+
+body.theme-neon .notif-item.unread {
+    background: rgba(0, 242, 254, 0.03);
+}
+
+body.theme-neon .game-notes {
+    background: rgba(0, 242, 254, 0.03);
 }

@@ -10,19 +10,38 @@
  * Run schema migration. Call once per request until tables exist.
  */
 function runSchemaMigration($pdo) {
+    $isSqlite = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+
     // Check if tables already exist
     try {
-        $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
-        if ($stmt->rowCount() > 0) {
-            return; // already migrated
+        if ($isSqlite) {
+            $stmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+            if ($stmt->fetch()) {
+                return; // already migrated
+            }
+        } else {
+            $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
+            if ($stmt->rowCount() > 0) {
+                return; // already migrated
+            }
         }
     } catch (PDOException $e) {
         // DB might not exist yet
     }
 
+    $execQuery = function($sql) use ($pdo, $isSqlite) {
+        if ($isSqlite) {
+            $sql = str_replace('ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci', '', $sql);
+            $sql = str_replace('id INT AUTO_INCREMENT PRIMARY KEY', 'id INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
+            $sql = str_replace('INSERT IGNORE', 'INSERT OR IGNORE', $sql);
+            $sql = preg_replace('/ENUM\([^)]+\)/i', 'TEXT', $sql);
+        }
+        return $pdo->exec($sql);
+    };
+
     try {
         // ----- USERS -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+        $execQuery("CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             full_name VARCHAR(100) NOT NULL,
             username VARCHAR(50) NOT NULL UNIQUE,
@@ -41,7 +60,7 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- CUSTOM STATUSES -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS custom_statuses (
+        $execQuery("CREATE TABLE IF NOT EXISTS custom_statuses (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(50) NOT NULL,
             icon VARCHAR(10) NOT NULL DEFAULT '📋',
@@ -54,7 +73,7 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- VIP GAMES -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS vip_games (
+        $execQuery("CREATE TABLE IF NOT EXISTS vip_games (
             id INT AUTO_INCREMENT PRIMARY KEY,
             match_name VARCHAR(200) NOT NULL,
             league VARCHAR(100) DEFAULT NULL,
@@ -70,7 +89,7 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- ANNOUNCEMENTS -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS announcements (
+        $execQuery("CREATE TABLE IF NOT EXISTS announcements (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(200) NOT NULL,
             message TEXT NOT NULL,
@@ -80,7 +99,7 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- NOTIFICATIONS -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
+        $execQuery("CREATE TABLE IF NOT EXISTS notifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT DEFAULT NULL,
             title VARCHAR(200) NOT NULL,
@@ -93,14 +112,14 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- SITE SETTINGS -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS site_settings (
+        $execQuery("CREATE TABLE IF NOT EXISTS site_settings (
             id INT AUTO_INCREMENT PRIMARY KEY,
             setting_key VARCHAR(50) NOT NULL UNIQUE,
             setting_value TEXT DEFAULT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- ACTIVITY LOG -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS activity_log (
+        $execQuery("CREATE TABLE IF NOT EXISTS activity_log (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT DEFAULT NULL,
             action VARCHAR(100) NOT NULL,
@@ -111,7 +130,7 @@ function runSchemaMigration($pdo) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // ----- SESSIONS -----
-        $pdo->exec("CREATE TABLE IF NOT EXISTS sessions (
+        $execQuery("CREATE TABLE IF NOT EXISTS sessions (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             session_token VARCHAR(255) NOT NULL,
@@ -127,8 +146,10 @@ function runSchemaMigration($pdo) {
         if ($check->fetchColumn() == 0) {
             // Default admin (password: Admin@123 — change after first login)
             $adminPass = password_hash('Admin@123', PASSWORD_BCRYPT, ['cost' => 10]);
-            $pdo->prepare("INSERT IGNORE INTO users (full_name, username, password, role, vip_access) VALUES (?, ?, ?, 'admin', 1)")
-                ->execute(['Super Admin', 'admin', $adminPass]);
+
+            $uQuery = "INSERT IGNORE INTO users (full_name, username, password, role, vip_access) VALUES (?, ?, ?, 'admin', 1)";
+            if ($isSqlite) $uQuery = str_replace('INSERT IGNORE', 'INSERT OR IGNORE', $uQuery);
+            $pdo->prepare($uQuery)->execute(['Super Admin', 'admin', $adminPass]);
 
             // Default statuses
             $statuses = [
@@ -142,7 +163,10 @@ function runSchemaMigration($pdo) {
                 ['Account Restricted', '🔒', '#dc3545', 'Account Restricted', 'Your account has restricted access.', 1],
                 ['Renewal Required', '🔄', '#fd7e14', 'VIP Renewal Required', 'Your VIP membership has expired.', 1],
             ];
-            $stmt = $pdo->prepare("INSERT IGNORE INTO custom_statuses (name, icon, color, title, message, restrict_access) VALUES (?, ?, ?, ?, ?, ?)");
+
+            $statusQuery = "INSERT IGNORE INTO custom_statuses (name, icon, color, title, message, restrict_access) VALUES (?, ?, ?, ?, ?, ?)";
+            if ($isSqlite) $statusQuery = str_replace('INSERT IGNORE', 'INSERT OR IGNORE', $statusQuery);
+            $stmt = $pdo->prepare($statusQuery);
             foreach ($statuses as $s) {
                 $stmt->execute($s);
             }
@@ -153,8 +177,12 @@ function runSchemaMigration($pdo) {
                 ['telegram_link', 'https://t.me/fixedbetsro'],
                 ['whatsapp_link', 'https://wa.me/40700000000'],
                 ['support_email', 'support@fixedbetsro.com'],
+                ['dashboard_theme', 'dark'],
             ];
-            $sStmt = $pdo->prepare("INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES (?, ?)");
+
+            $settingsQuery = "INSERT IGNORE INTO site_settings (setting_key, setting_value) VALUES (?, ?)";
+            if ($isSqlite) $settingsQuery = str_replace('INSERT IGNORE', 'INSERT OR IGNORE', $settingsQuery);
+            $sStmt = $pdo->prepare($settingsQuery);
             foreach ($settings as $s) {
                 $sStmt->execute($s);
             }

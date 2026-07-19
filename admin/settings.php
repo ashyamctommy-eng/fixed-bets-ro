@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 updateSiteSetting($pdo, 'telegram_link', sanitize($_POST['telegram_link'] ?? ''));
                 updateSiteSetting($pdo, 'whatsapp_link', sanitize($_POST['whatsapp_link'] ?? ''));
                 updateSiteSetting($pdo, 'support_email', sanitize($_POST['support_email'] ?? ''));
+                updateSiteSetting($pdo, 'dashboard_theme', sanitize($_POST['dashboard_theme'] ?? 'dark'));
                 $success = 'Settings updated successfully!';
                 break;
             
@@ -64,6 +65,7 @@ $siteLogo = getSiteSetting($pdo, 'site_logo') ?? '';
 $telegramLink = getSiteSetting($pdo, 'telegram_link') ?? 'https://t.me/fixedbetsro';
 $whatsappLink = getSiteSetting($pdo, 'whatsapp_link') ?? 'https://wa.me/40700000000';
 $supportEmail = getSiteSetting($pdo, 'support_email') ?? 'support@fixedbetsro.com';
+$dashboardTheme = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
 
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
@@ -101,6 +103,14 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Support Email</label>
                     <input type="email" name="support_email" value="<?= e($supportEmail) ?>" placeholder="support@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Website Theme</label>
+                    <select name="dashboard_theme">
+                        <option value="dark" <?= $dashboardTheme === 'dark' ? 'selected' : '' ?>>🏆 Dark Gold (Classic)</option>
+                        <option value="light" <?= $dashboardTheme === 'light' ? 'selected' : '' ?>>☀️ Modern Light</option>
+                        <option value="neon" <?= $dashboardTheme === 'neon' ? 'selected' : '' ?>>🧪 Cyber Emerald (Neon)</option>
+                    </select>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-block">💾 Save Settings</button>
