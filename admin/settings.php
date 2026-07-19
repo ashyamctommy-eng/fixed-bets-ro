@@ -107,9 +107,9 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Website Theme</label>
                     <select name="dashboard_theme">
-                        <option value="dark" <?= $dashboardTheme === 'dark' ? 'selected' : '' ?>>🏆 Dark Gold (Classic)</option>
-                        <option value="light" <?= $dashboardTheme === 'light' ? 'selected' : '' ?>>☀️ Modern Light</option>
-                        <option value="neon" <?= $dashboardTheme === 'neon' ? 'selected' : '' ?>>🧪 Cyber Emerald (Neon)</option>
+                        <option value="dark" <?= $dashboardTheme === 'dark' ? 'selected' : '' ?>>Dark Gold (Classic)</option>
+                        <option value="light" <?= $dashboardTheme === 'light' ? 'selected' : '' ?>>Modern Light</option>
+                        <option value="neon" <?= $dashboardTheme === 'neon' ? 'selected' : '' ?>>Cyber Emerald (Neon)</option>
                     </select>
                 </div>
                 

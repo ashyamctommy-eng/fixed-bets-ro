@@ -809,3 +809,19 @@ body.theme-neon .notif-item.unread {
 body.theme-neon .game-notes {
     background: rgba(0, 242, 254, 0.03);
 }
+
+/* Inline SVG icon styles for high-end look */
+.nav-svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    display: inline-block;
+    vertical-align: middle;
+    transition: var(--transition);
+}
+
+/* Support hover transitions */
+.nav-item:hover .nav-svg {
+    transform: scale(1.1);
+}
