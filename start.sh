@@ -4,6 +4,12 @@
 # Configures Apache for Railway's dynamic PORT
 # ============================================================
 
+# If running in containerized environment with no custom SQL host provided, create use_sqlite.txt file
+if [ -z "$MYSQLHOST" ] && [ -z "$DATABASE_URL" ] && [ -z "$DB_HOST" ]; then
+    echo "No MySQL host provided. Forcing SQLite dynamic fallback."
+    touch /var/www/html/config/use_sqlite.txt
+fi
+
 # Set Apache to listen on Railway's PORT
 PORT=${PORT:-8080}
 echo "Listen 0.0.0.0:${PORT}" > /etc/apache2/ports.conf

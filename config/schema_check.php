@@ -34,6 +34,7 @@ function runSchemaMigration($pdo) {
             $sql = str_replace('ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci', '', $sql);
             $sql = str_replace('id INT AUTO_INCREMENT PRIMARY KEY', 'id INTEGER PRIMARY KEY AUTOINCREMENT', $sql);
             $sql = str_replace('INSERT IGNORE', 'INSERT OR IGNORE', $sql);
+            $sql = str_replace('ON UPDATE CURRENT_TIMESTAMP', '', $sql);
             $sql = preg_replace('/ENUM\([^)]+\)/i', 'TEXT', $sql);
         }
         return $pdo->exec($sql);

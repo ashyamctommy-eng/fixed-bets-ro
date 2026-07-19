@@ -19,7 +19,11 @@ $envHost = getenv('DB_HOST') ?: null;
 $isContainer = getenv('PORT') || getenv('RAILWAY_STATIC_URL');
 
 // Force SQLite for testing/local setups OR automatically fallback to SQLite on Railway if no MySQL credentials are provided
-if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt') || ($isContainer && !$railwayHost && !$dbUrl && !$envHost)) {
+// We also verify that we aren't trying to connect to a dummy local host (e.g., if sql123.infinityfree.com is set in configuration, but we are running in a container like Railway, we should fallback to SQLite to prevent dns lookup failures).
+$isDummyInfinityFree = ($isContainer && isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false);
+$hasNoCredentials = (!$railwayHost && !$dbUrl && !$envHost);
+
+if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt') || $hasNoCredentials || $isDummyInfinityFree) {
     define('DB_HOST', 'localhost');
     define('DB_PORT', '0');
     define('DB_NAME', 'sqlite');
