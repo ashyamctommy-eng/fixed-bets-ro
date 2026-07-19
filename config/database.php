@@ -12,8 +12,14 @@
 //
 // ============================================================
 
-// Check if we should use SQLite for local testing
-if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt')) {
+// --- Detect Environment Configurations ---
+$railwayHost = getenv('MYSQLHOST') ?: null;
+$dbUrl = getenv('DATABASE_URL') ?: null;
+$envHost = getenv('DB_HOST') ?: null;
+$isContainer = getenv('PORT') || getenv('RAILWAY_STATIC_URL');
+
+// Force SQLite for testing/local setups OR automatically fallback to SQLite on Railway if no MySQL credentials are provided
+if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt') || ($isContainer && !$railwayHost && !$dbUrl && !$envHost)) {
     define('DB_HOST', 'localhost');
     define('DB_PORT', '0');
     define('DB_NAME', 'sqlite');
@@ -37,12 +43,6 @@ if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt')) {
     }
 }
 
-// --- Railway MySQL (auto) ---
-$railwayHost = getenv('MYSQLHOST') ?: null;
-
-// --- Generic DATABASE_URL (auto) ---
-$dbUrl = getenv('DATABASE_URL') ?: null;
-
 if ($railwayHost) {
     define('DB_HOST', getenv('MYSQLHOST'));
     define('DB_PORT', getenv('MYSQLPORT') ?: '3306');
@@ -57,6 +57,13 @@ if ($railwayHost) {
     define('DB_NAME', ltrim($parts['path'] ?? 'fixed_bets_ro', '/'));
     define('DB_USER', $parts['user'] ?? 'root');
     define('DB_PASS', $parts['pass'] ?? '');
+    define('DB_CHARSET', 'utf8mb4');
+} elseif ($envHost) {
+    define('DB_HOST', getenv('DB_HOST'));
+    define('DB_PORT', getenv('DB_PORT') ?: '3306');
+    define('DB_NAME', getenv('DB_NAME') ?: 'fixed_bets_ro');
+    define('DB_USER', getenv('DB_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
     define('DB_CHARSET', 'utf8mb4');
 } else {
     // ============================================================
