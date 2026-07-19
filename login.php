@@ -61,7 +61,10 @@ $pageTitle = 'Login';
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇷🇴</text></svg>">
 </head>
-<body>
+<?php
+$themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
+?>
+<body class="theme-<?= e($themeClass) ?>">
 <div class="login-page">
     <div class="login-container">
         <div class="login-header">

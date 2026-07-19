@@ -55,6 +55,11 @@ function getSiteSetting($pdo, $key) {
  * Update site setting
  */
 function updateSiteSetting($pdo, $key, $value) {
+    $isSqlite = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+    if ($isSqlite) {
+        $stmt = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?) ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value");
+        return $stmt->execute([$key, $value]);
+    }
     $stmt = $pdo->prepare("INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
     return $stmt->execute([$key, $value, $value]);
 }
