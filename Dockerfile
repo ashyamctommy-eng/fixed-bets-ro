@@ -5,8 +5,8 @@
 
 FROM php:8.2-apache
 
-# Enable Apache rewrite
-RUN a2enmod rewrite
+# Enable Apache rewrite and headers modules
+RUN a2enmod rewrite headers
 
 # Fix MPM conflict: only prefork works with mod_php
 RUN a2dismod mpm_event mpm_worker 2>/dev/null; a2enmod mpm_prefork; exit 0
