@@ -12,6 +12,31 @@
 //
 // ============================================================
 
+// Check if we should use SQLite for local testing
+if (getenv('USE_SQLITE') || file_exists(__DIR__ . '/use_sqlite.txt')) {
+    define('DB_HOST', 'localhost');
+    define('DB_PORT', '0');
+    define('DB_NAME', 'sqlite');
+    define('DB_USER', 'sqlite');
+    define('DB_PASS', 'sqlite');
+    define('DB_CHARSET', 'utf8mb4');
+
+    try {
+        $pdo = new PDO("sqlite:" . __DIR__ . "/database.sqlite");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $pdo->sqliteCreateFunction('NOW', function() {
+            return date('Y-m-d H:i:s');
+        });
+        $pdo->sqliteCreateFunction('CURDATE', function() {
+            return date('Y-m-d');
+        });
+        return; // Connection established, exit script
+    } catch (PDOException $e) {
+        die("SQLite connection failed: " . $e->getMessage());
+    }
+}
+
 // --- Railway MySQL (auto) ---
 $railwayHost = getenv('MYSQLHOST') ?: null;
 

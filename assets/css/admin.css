@@ -11,7 +11,7 @@
 /* --- Sidebar --- */
 .admin-sidebar {
     width: 250px;
-    background: #0d0d14;
+    background: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -68,12 +68,12 @@
 }
 
 .nav-item:hover {
-    background: rgba(255,215,0,0.05);
+    background: var(--bg-nav-hover);
     color: var(--text-primary);
 }
 
 .nav-item.active {
-    background: rgba(255,215,0,0.1);
+    background: var(--bg-nav-active);
     color: var(--gold);
     border-left-color: var(--gold);
 }
@@ -106,7 +106,7 @@
 
 /* --- Top Bar --- */
 .admin-topbar {
-    background: #0d0d14;
+    background: var(--bg-topbar);
     padding: 1rem 2rem;
     display: flex;
     align-items: center;

@@ -17,7 +17,7 @@
 /* --- Top Bar --- */
 .dash-topbar {
     grid-area: topbar;
-    background: #0d0d14;
+    background: var(--bg-topbar);
     padding: 0.75rem 2rem;
     display: flex;
     align-items: center;
@@ -92,7 +92,7 @@
 /* --- User Sidebar --- */
 .user-sidebar {
     grid-area: sidebar;
-    background: #0d0d14;
+    background: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -147,12 +147,12 @@
 }
 
 .user-nav .nav-item:hover {
-    background: rgba(255,215,0,0.05);
+    background: var(--bg-nav-hover);
     color: var(--text-primary);
 }
 
 .user-nav .nav-item.active {
-    background: rgba(255,215,0,0.1);
+    background: var(--bg-nav-active);
     color: var(--gold);
     border-left-color: var(--gold);
 }
@@ -238,7 +238,7 @@
 
 /* --- Welcome Card --- */
 .welcome-card {
-    background: linear-gradient(135deg, #1a1a24 0%, #0d0d14 100%);
+    background: var(--bg-welcome);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     padding: 2rem;
