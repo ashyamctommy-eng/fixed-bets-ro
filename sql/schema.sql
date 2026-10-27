@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 -- Insert default admin account (password: Admin@123)
 INSERT INTO users (full_name, username, password, role, vip_access)
-VALUES ('Super Admin', 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1);
+VALUES ('Super Admin', 'admin', '$2y$10$cqc3X/MlLDJkqvuXvJ1syO8m9pFwQ/7gjUlq7DLLWRo9mX10IIM3G', 'admin', 1);
 
 -- Insert default statuses
 INSERT INTO custom_statuses (name, icon, color, title, message, restrict_access) VALUES
