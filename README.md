@@ -30,6 +30,13 @@ InfinityFree runs PHP itself. start.sh is for the Railway/Apache container setup
 
 If the admin password was set during installation, use that password. If you imported sql/schema.sql manually, its seed account is admin / Admin@123; change that password immediately. The InfinityFree installer is the recommended setup method because the SQL file's database name is not automatically prefixed for your account.
 
+## Updating an existing InfinityFree site
+
+- Back up the website files and MySQL database first.
+- Do not replace your live `config/database.php` with the GitHub copy; the repository copy contains placeholder values.
+- Do not re-import `sql/schema.sql` into a live database. It is for a fresh database and does not update passwords in an existing database.
+- Upload only the runtime files you are intentionally changing. `README.md` is documentation and does not need to be uploaded to the website.
+
 ## Security notes
 - Passwords are stored as password hashes.
 - The installer rejects an existing users table rather than overwriting a live database.
