@@ -2,58 +2,73 @@
 
 A private-access betting platform. Admins create and manage user accounts; users do not self-register.
 
-## Features
-- Admin-managed accounts and VIP access
-- Custom user statuses and access restrictions
-- VIP games and results tracking
-- Announcements and notifications
-- User dashboards, Telegram/WhatsApp support links, and site settings
-
 ## Requirements
 - PHP 8.0+
 - MySQL 5.7+ / MariaDB 10.3+
 - PHP PDO MySQL enabled
 
-## InfinityFree installation
+## Fresh installation and deployment on InfinityFree
 
-1. In the InfinityFree control panel, create a MySQL database. Open its **Details** and keep the exact host, database name, username, and password. InfinityFree database names and usernames include an account prefix.
-2. Upload the project files to htdocs/. The config/ folder must be writable during setup so the wizard can save the database configuration.
-3. Open https://your-domain/install.php and enter the database details, site URL, and the admin username/password you want. Use an empty database; the wizard creates tables but does not create the MySQL database.
-4. When setup completes, sign in at https://your-domain/login.php. Admin accounts are redirected to /admin/index.php.
-5. **Delete install.php from htdocs after setup.** The wizard also writes config/install.lock to block a second install.
+The installer creates the tables inside a database that you create in the InfinityFree control panel. It does not create a MySQL database. Use an empty database; the installer deliberately stops if it finds an existing users table.
 
-InfinityFree runs PHP itself. start.sh is for the Railway/Apache container setup and is not used on InfinityFree.
+### 1. Back up the current site
 
-## Admin login routes
-- Sign-in page for both admin and VIP accounts: /login.php
-- Admin dashboard after sign-in: /admin/index.php
+Before replacing files, download a copy of the current htdocs/ files and export the current database from phpMyAdmin. Even if there are no user accounts, the database may contain settings or other site data.
 
-If the admin password was set during installation, use that password. If you imported sql/schema.sql manually, its seed account is admin / Admin@123; change that password immediately. The InfinityFree installer is the recommended setup method because the SQL file's database name is not automatically prefixed for your account.
+### 2. Download the project files
+
+On GitHub, open the ashyamctommy-eng/fixed-bets-ro repository, select the main branch, then choose **Code → Download ZIP**. Extract the ZIP on your computer.
+
+### 3. Create a fresh MySQL database
+
+In the InfinityFree control panel, open **MySQL Databases** and create a database. Open **Details** and keep the exact database host, database name, username, and password. InfinityFree adds an account prefix to the database name and username. The port is normally 3306.
+
+If the account has reached its database limit, back up the old database first. Only delete the old database in the hosting control panel after confirming it is the one used by this site and that you no longer need its data. Then create a fresh empty database.
+
+### 4. Upload the files
+
+In InfinityFree **File Manager**, open htdocs/. Back up or remove the old application files, then upload and extract the project ZIP so install.php is directly inside htdocs/. Upload hidden files such as .htaccess too. Keep any hosting-managed verification files that are not part of this project.
+
+The config/ folder must be writable during setup so the installer can save config/database.php and config/install.lock. Do not paste database credentials into chat or public files.
+
+### 5. Run the installer
+
+Open [https://fixedbetsro.page.gd/install.php](https://fixedbetsro.page.gd/install.php) (or replace that domain with your own). Enter the exact database details from **MySQL Databases → Details**, your site URL, and a new admin username and strong password. The installer creates the tables and admin account and saves the database configuration.
+
+If you see a message that the database already has a users table, stop and choose a new empty database. Do not re-import the schema into a database with existing data.
+
+### 6. Sign in and secure the installation
+
+Go to [https://fixedbetsro.page.gd/login.php](https://fixedbetsro.page.gd/login.php) and sign in with the admin username and password you chose in the installer. Admins are redirected to /admin/index.php. After signing in, you can change your password under **Admin → Settings**.
+
+Delete install.php from htdocs/ after setup. Keep config/install.lock; it prevents the installer from running again. InfinityFree runs PHP itself, so start.sh is not used there; that script is for the Railway/Apache container setup.
 
 ## Updating an existing InfinityFree site
 
-- Back up the website files and MySQL database first.
-- Do not replace your live `config/database.php` with the GitHub copy; the repository copy contains placeholder values.
-- Do not re-import `sql/schema.sql` into a live database. It is for a fresh database and does not update passwords in an existing database.
-- Upload only the runtime files you are intentionally changing. `README.md` is documentation and does not need to be uploaded to the website.
+1. Back up the website files and export the database before an update.
+2. Check the changed files in the GitHub commit and upload only the runtime files that changed.
+3. Keep the live config/database.php. The copy in the repository contains placeholders and would break the live database connection if uploaded over it.
+4. Do not run install.php against an existing database, and do not re-import sql/schema.sql into a live database. Schema imports are for a fresh database; they do not update existing passwords.
+5. README.md is documentation and does not need to be uploaded to the website.
 
-## Security notes
-- Passwords are stored as password hashes.
-- The installer rejects an existing users table rather than overwriting a live database.
-- Remove install.php after installing, even though the completed wizard is locked.
-- Keep config/database.php private; the project .htaccess denies direct web access to the config directory.
+## Admin login routes
+- Shared sign-in page for admins and VIP users: /login.php
+- Admin dashboard after successful sign-in: /admin/index.php
+
+The recommended InfinityFree setup is the installer above. If you manually import sql/schema.sql into a fresh database, its seed account is admin / Admin@123; change that password immediately. Never re-import the schema into an existing database to fix a login.
 
 ## Project structure
 
-```text
+
+\`\`\`text
 fixed-bets-ro/
 ├── admin/           # Admin pages
-├── assets/           # CSS, JavaScript, images
-├── config/           # Database, session, and app configuration
-├── includes/         # Authentication and shared UI/functions
-├── sql/schema.sql    # Database schema and manual-import seed data
-├── user/             # VIP user pages
-├── install.php       # One-time installation wizard
-├── login.php         # Shared admin/VIP login page
-└── start.sh          # Railway container startup only
-```
+├── assets/          # CSS, JavaScript, images
+├── config/          # Database, session, and app configuration
+├── includes/        # Authentication and shared UI/functions
+├── sql/schema.sql   # Database schema and manual-import seed data
+├── user/            # VIP user pages
+├── install.php      # One-time installation wizard
+├── login.php        # Shared admin/VIP login page
+└── start.sh         # Railway container startup only
+\`\`\`text
