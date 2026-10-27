@@ -60,7 +60,7 @@ The recommended InfinityFree setup is the installer above. If you manually impor
 ## Project structure
 
 
-\`\`\`text
+```text
 fixed-bets-ro/
 ├── admin/           # Admin pages
 ├── assets/          # CSS, JavaScript, images
@@ -71,4 +71,4 @@ fixed-bets-ro/
 ├── install.php      # One-time installation wizard
 ├── login.php        # Shared admin/VIP login page
 └── start.sh         # Railway container startup only
-\`\`\`text
+```text
