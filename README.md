@@ -49,4 +49,4 @@ fixed-bets-ro/
 ├── install.php       # One-time installation wizard
 ├── login.php         # Shared admin/VIP login page
 └── start.sh          # Railway container startup only
-```text
+```
