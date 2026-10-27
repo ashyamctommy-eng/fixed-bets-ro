@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // ADMIN - ANNOUNCEMENTS MANAGEMENT
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -68,13 +68,13 @@ $announcements = $pdo->query("SELECT * FROM announcements ORDER BY created_at DE
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
 
-<?php if ($error): ?><div class="alert alert-danger"><span>❌</span> <?= $error ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><span>✅</span> <?= $success ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= svgIcon('x') ?> <?= $error ?></div><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success"><?= svgIcon('check') ?> <?= $success ?></div><?php endif; ?>
 
 <div class="card">
     <div class="card-header">
-        <h2>📢 Announcements</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('addAnnouncementModal')">➕ Post Announcement</button>
+        <h2><?= svgIcon('megaphone') ?> Announcements</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="openModal('addAnnouncementModal')"><?= svgIcon('plus') ?> Post announcement</button>
     </div>
     <div class="card-body">
         <?php if (count($announcements) > 0): ?>
@@ -85,7 +85,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <div class="announcement-title"><?= e($a['title']) ?></div>
                     <div class="announcement-message"><?= nl2br(e($a['message'])) ?></div>
                     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-                        <span class="announcement-date">📅 <?= formatDateTime($a['created_at']) ?></span>
+                        <span class="announcement-date"><?= svgIcon('calendar') ?> <?= formatDateTime($a['created_at']) ?></span>
                         <span class="announcement-priority <?= $a['priority'] ?>"><?= e($a['priority']) ?></span>
                         <?php if (!$a['is_active']): ?>
                         <span class="badge badge-secondary">Hidden</span>
@@ -93,12 +93,12 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     </div>
                 </div>
                 <div class="actions" style="display: flex; gap: 4px; flex-shrink: 0;">
-                    <button class="btn btn-sm btn-secondary" onclick="editAnnouncement(<?= $a['id'] ?>)">✏️</button>
+                    <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Edit announcement" title="Edit announcement" onclick="editAnnouncement(<?= (int)$a['id'] ?>)"><?= svgIcon('edit') ?></button>
                     <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this announcement?');">
                         <?= csrfField() ?>
                         <input type="hidden" name="action" value="delete_announcement">
                         <input type="hidden" name="announcement_id" value="<?= $a['id'] ?>">
-                        <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                        <button type="submit" class="btn btn-sm btn-danger icon-button" aria-label="Delete announcement" title="Delete announcement"><?= svgIcon('trash') ?></button>
                     </form>
                 </div>
             </div>
@@ -106,7 +106,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
         <?php endforeach; ?>
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">📢</span>
+            <?= svgIcon('megaphone', 'empty-icon-svg') ?>
             <p>No announcements yet.</p>
         </div>
         <?php endif; ?>
@@ -118,7 +118,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <div class="modal">
         <form method="POST">
             <div class="modal-header">
-                <h3>📢 Post Announcement</h3>
+                <h3><?= svgIcon('megaphone') ?> Post announcement</h3>
                 <button class="modal-close" onclick="closeModal('addAnnouncementModal')">&times;</button>
             </div>
             <div class="modal-body">
@@ -136,16 +136,16 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Priority</label>
                     <select name="priority">
-                        <option value="normal">📌 Normal</option>
-                        <option value="high">⚠️ High</option>
-                        <option value="urgent">🚨 Urgent</option>
-                        <option value="low">ℹ️ Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addAnnouncementModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">✅ Post</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('send') ?> Post announcement</button>
             </div>
         </form>
     </div>
@@ -156,7 +156,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <div class="modal">
         <form method="POST">
             <div class="modal-header">
-                <h3>✏️ Edit Announcement</h3>
+                <h3><?= svgIcon('edit') ?> Edit announcement</h3>
                 <button class="modal-close" onclick="closeModal('editAnnouncementModal')">&times;</button>
             </div>
             <div class="modal-body">
@@ -176,10 +176,10 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <div class="form-group">
                         <label>Priority</label>
                         <select name="priority" id="ea_priority">
-                            <option value="normal">📌 Normal</option>
-                            <option value="high">⚠️ High</option>
-                            <option value="urgent">🚨 Urgent</option>
-                            <option value="low">ℹ️ Low</option>
+                            <option value="normal">Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="low">Low</option>
                         </select>
                     </div>
                     <div class="form-checkbox" style="align-self: flex-end; padding-bottom: 0.5rem;">
@@ -192,7 +192,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editAnnouncementModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Update</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Save changes</button>
             </div>
         </form>
     </div>

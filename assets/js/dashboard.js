@@ -1,5 +1,5 @@
 // ============================================================
-// USER DASHBOARD JAVASCRIPT - FIXED BETS RO 🇷🇴
+// USER DASHBOARD JAVASCRIPT - FIXED BETS RO
 // ============================================================
 
 /**

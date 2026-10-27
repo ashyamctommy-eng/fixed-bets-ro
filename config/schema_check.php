@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// SCHEMA AUTO-MIGRATION — FIXED BETS RO 🇷🇴
+// SCHEMA AUTO-MIGRATION — FIXED BETS RO
 // ============================================================
 // Runs once on Railway (or any fresh DB) to create all tables
 // and seed default data. Safe to run repeatedly — uses IF NOT EXISTS.
@@ -13,20 +13,22 @@ function runSchemaMigration($pdo) {
     $isSqlite = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
 
     // Check if tables already exist
+    $usersTableExists = false;
     try {
         if ($isSqlite) {
             $stmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
-            if ($stmt->fetch()) {
-                return; // already migrated
-            }
+            $usersTableExists = (bool)$stmt->fetch();
         } else {
             $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
-            if ($stmt->rowCount() > 0) {
-                return; // already migrated
-            }
+            $usersTableExists = $stmt->rowCount() > 0;
         }
     } catch (PDOException $e) {
         // DB might not exist yet
+    }
+
+    if ($usersTableExists) {
+        upgradeVipGameOutcomeSchema($pdo, $isSqlite);
+        return;
     }
 
     $execQuery = function($sql) use ($pdo, $isSqlite) {
@@ -63,7 +65,7 @@ function runSchemaMigration($pdo) {
         $execQuery("CREATE TABLE IF NOT EXISTS custom_statuses (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(50) NOT NULL,
-            icon VARCHAR(10) NOT NULL DEFAULT '📋',
+            icon VARCHAR(10) NOT NULL DEFAULT 'tag',
             color VARCHAR(7) NOT NULL DEFAULT '#FFD700',
             title VARCHAR(100) NOT NULL,
             message TEXT NOT NULL,
@@ -83,7 +85,9 @@ function runSchemaMigration($pdo) {
             match_time TIME NOT NULL,
             confidence VARCHAR(50) DEFAULT NULL,
             notes TEXT DEFAULT NULL,
-            result_status ENUM('win', 'loss', 'pending') NOT NULL DEFAULT 'pending',
+            result_status ENUM('win', 'loss', 'pending', 'void', 'push') NOT NULL DEFAULT 'pending',
+            final_score VARCHAR(32) DEFAULT NULL,
+            settled_at DATETIME DEFAULT NULL,
             is_archived TINYINT(1) NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -153,15 +157,15 @@ function runSchemaMigration($pdo) {
 
             // Default statuses
             $statuses = [
-                ['Active', '✅', '#28a745', 'Account Active', 'Your account is fully active. Enjoy VIP betting!', 0],
-                ['Pending Setup', '⏳', '#ffc107', 'Account Pending Setup', 'Your account is being set up.', 1],
-                ['Payment Pending', '💳', '#ff9800', 'Payment Pending', 'Your payment is being processed.', 1],
-                ['VIP Expired', '📅', '#dc3545', 'VIP Membership Expired', 'Your VIP membership has expired.', 1],
-                ['Verification Required', '⚠️', '#e83e8c', 'Verification Required', 'Your account requires verification.', 1],
-                ['Suspended', '🚫', '#dc3545', 'Account Suspended', 'Your account has been suspended.', 1],
-                ['Under Review', '🔍', '#17a2b8', 'Account Under Review', 'Your account is currently under review.', 1],
-                ['Account Restricted', '🔒', '#dc3545', 'Account Restricted', 'Your account has restricted access.', 1],
-                ['Renewal Required', '🔄', '#fd7e14', 'VIP Renewal Required', 'Your VIP membership has expired.', 1],
+                ['Active', 'check', '#28a745', 'Account Active', 'Your account is fully active. Enjoy VIP betting!', 0],
+                ['Pending Setup', 'clock', '#ffc107', 'Account Pending Setup', 'Your account is being set up.', 1],
+                ['Payment Pending', 'card', '#ff9800', 'Payment Pending', 'Your payment is being processed.', 1],
+                ['VIP Expired', 'calendar', '#dc3545', 'VIP Membership Expired', 'Your VIP membership has expired.', 1],
+                ['Verification Required', 'shield', '#e83e8c', 'Verification Required', 'Your account requires verification.', 1],
+                ['Suspended', 'shield', '#dc3545', 'Account Suspended', 'Your account has been suspended.', 1],
+                ['Under Review', 'search', '#17a2b8', 'Account Under Review', 'Your account is currently under review.', 1],
+                ['Account Restricted', 'lock', '#dc3545', 'Account Restricted', 'Your account has restricted access.', 1],
+                ['Renewal Required', 'refresh', '#fd7e14', 'VIP Renewal Required', 'Your VIP membership has expired.', 1],
             ];
 
             $statusQuery = "INSERT IGNORE INTO custom_statuses (name, icon, color, title, message, restrict_access) VALUES (?, ?, ?, ?, ?, ?)";
@@ -173,7 +177,7 @@ function runSchemaMigration($pdo) {
 
             // Default site settings
             $settings = [
-                ['site_name', 'FIXED BETS RO 🇷🇴'],
+                ['site_name', 'FIXED BETS RO'],
                 ['telegram_link', 'https://t.me/fixedbetsro'],
                 ['whatsapp_link', 'https://wa.me/40700000000'],
                 ['support_email', 'support@fixedbetsro.com'],
@@ -190,5 +194,45 @@ function runSchemaMigration($pdo) {
     } catch (PDOException $e) {
         // Silently fail — the app will show a connection error if critical
         error_log("Schema migration error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Additive upgrade for installations created before settlement metadata existed.
+ */
+function upgradeVipGameOutcomeSchema($pdo, $isSqlite) {
+    try {
+        if ($isSqlite) {
+            $columns = $pdo->query("PRAGMA table_info(vip_games)")->fetchAll(PDO::FETCH_ASSOC);
+            $names = array_column($columns, 'name');
+            if (!in_array('final_score', $names, true)) {
+                $pdo->exec("ALTER TABLE vip_games ADD COLUMN final_score TEXT DEFAULT NULL");
+            }
+            if (!in_array('settled_at', $names, true)) {
+                $pdo->exec("ALTER TABLE vip_games ADD COLUMN settled_at TEXT DEFAULT NULL");
+            }
+            return;
+        }
+
+        $columns = $pdo->query("SHOW COLUMNS FROM vip_games")->fetchAll(PDO::FETCH_ASSOC);
+        $byName = [];
+        foreach ($columns as $column) {
+            $byName[$column['Field']] = $column;
+        }
+        if (!isset($byName['final_score'])) {
+            $pdo->exec("ALTER TABLE vip_games ADD COLUMN final_score VARCHAR(32) DEFAULT NULL AFTER result_status");
+        }
+        if (!isset($byName['settled_at'])) {
+            $pdo->exec("ALTER TABLE vip_games ADD COLUMN settled_at DATETIME DEFAULT NULL AFTER final_score");
+        }
+        if (
+            isset($byName['result_status'])
+            && (strpos(strtolower($byName['result_status']['Type']), 'void') === false
+                || strpos(strtolower($byName['result_status']['Type']), 'push') === false)
+        ) {
+            $pdo->exec("ALTER TABLE vip_games MODIFY result_status ENUM('win', 'loss', 'pending', 'void', 'push') NOT NULL DEFAULT 'pending'");
+        }
+    } catch (PDOException $e) {
+        error_log('VIP game outcome schema upgrade failed: ' . $e->getMessage());
     }
 }

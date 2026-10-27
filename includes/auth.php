@@ -1,11 +1,12 @@
 <?php
 // ============================================================
 // AUTHENTICATION SYSTEM
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/functions.php';
 
 /**
  * Authenticate user login
@@ -141,20 +142,38 @@ function tryRememberMe() {
  * Logout user
  */
 function logoutUser($pdo) {
-    if (isset($_SESSION['user_id'])) {
-        logActivity($pdo, $_SESSION['user_id'], 'logout', 'User logged out');
-        
-        // Remove remember token from database
-        $stmt = $pdo->prepare("UPDATE users SET remember_token = NULL WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        
-        // Delete sessions
-        deleteUserSessions($pdo, $_SESSION['user_id']);
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+
+    if ($userId > 0) {
+        try {
+            logActivity($pdo, $userId, 'logout', 'User logged out');
+        } catch (Throwable $e) {
+            error_log('Logout activity could not be recorded: ' . $e->getMessage());
+        }
+
+        try {
+            $stmt = $pdo->prepare("UPDATE users SET remember_token = NULL WHERE id = ?");
+            $stmt->execute([$userId]);
+        } catch (Throwable $e) {
+            error_log('Remember token cleanup failed during logout: ' . $e->getMessage());
+        }
+
+        try {
+            deleteUserSessions($pdo, $userId);
+        } catch (Throwable $e) {
+            error_log('Session cleanup failed during logout: ' . $e->getMessage());
+        }
     }
     
     // Clear cookie
     if (isset($_COOKIE['remember_token'])) {
-        setcookie('remember_token', '', time() - 3600, '/');
+        setcookie('remember_token', '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ]);
     }
     
     destroySession();

@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// BOOTSTRAP — FIXED BETS RO 🇷🇴
+// BOOTSTRAP — FIXED BETS RO
 // ============================================================
 // Load this early in every request to ensure DB schema exists.
 // Safe to include multiple times — migration is idempotent.

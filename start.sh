@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# STARTUP SCRIPT — FIXED BETS RO 🇷🇴
+# STARTUP SCRIPT — FIXED BETS RO
 # Configures Apache for Railway's dynamic PORT
 # ============================================================
 

@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // AJAX - DELETE NOTIFICATION
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';

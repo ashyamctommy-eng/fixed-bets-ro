@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // APPLICATION CONFIGURATION
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 // Site URL — auto-detect from the server request, Railway, or env
@@ -16,7 +16,7 @@ if (getenv('RAILWAY_PUBLIC_DOMAIN')) {
     define('SITE_URL', 'http://localhost');
 }
 
-define('SITE_NAME', 'FIXED BETS RO 🇷🇴');
+define('SITE_NAME', 'FIXED BETS RO');
 define('SITE_TAGLINE', 'VIP Betting Platform');
 
 // Session settings

@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// HOMEPAGE - FIXED BETS RO 🇷🇴
+// HOMEPAGE - FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/config/bootstrap.php';
@@ -27,7 +27,7 @@ $pageTitle = 'Home';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= SITE_NAME ?> | <?= SITE_TAGLINE ?></title>
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇷🇴</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="<?= SITE_URL ?>/assets/favicon.svg">
 </head>
 <?php
 $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
@@ -39,24 +39,25 @@ $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
         <div class="hero-overlay"></div>
         <div class="hero-content">
             <div class="hero-logo">
-                <span class="logo-emoji">🇷🇴</span>
+                <span class="brand-mark"><?= svgIcon('shield-check') ?></span>
                 <h1 class="site-title"><?= SITE_NAME ?></h1>
                 <p class="site-tagline">VIP Betting Platform</p>
             </div>
             
             <div class="hero-badges">
-                <span class="hero-badge">🔒 Private Access Only</span>
-                <span class="hero-badge">⭐ VIP Members</span>
-                <span class="hero-badge">📊 Premium Tips</span>
+                <span class="hero-badge"><?= svgIcon('lock') ?> Private access</span>
+                <span class="hero-badge"><?= svgIcon('star') ?> VIP members</span>
+                <span class="hero-badge"><?= svgIcon('chart') ?> Premium picks</span>
             </div>
             
             <div class="hero-actions">
-                <a href="login.php" class="btn btn-primary btn-lg">🔑 Member Login</a>
+                <a href="login.php" class="btn btn-primary btn-lg"><?= svgIcon('key') ?> Member login</a>
+                <a href="results.php" class="btn btn-secondary btn-lg"><?= svgIcon('chart') ?> View results</a>
             </div>
             
             <div class="hero-links">
-                <a href="<?= e($telegramLink) ?>" target="_blank" class="btn btn-telegram">💬 Join Telegram</a>
-                <a href="<?= e($whatsappLink) ?>" target="_blank" class="btn btn-whatsapp">📱 WhatsApp</a>
+                <a href="<?= e($telegramLink) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-telegram"><?= svgIcon('message') ?> Join Telegram</a>
+                <a href="<?= e($whatsappLink) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp"><?= svgIcon('phone') ?> WhatsApp</a>
             </div>
         </div>
     </section>
@@ -65,22 +66,23 @@ $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
     <section class="features">
         <div class="features-grid">
             <div class="feature-card">
-                <span class="feature-icon">🎯</span>
+                <span class="feature-icon"><?= svgIcon('target') ?></span>
                 <h3>VIP Games</h3>
                 <p>Premium betting selections curated for VIP members only.</p>
             </div>
             <div class="feature-card">
-                <span class="feature-icon">📊</span>
+                <span class="feature-icon"><?= svgIcon('chart') ?></span>
                 <h3>Results</h3>
-                <p>Transparent win/loss records for all posted games.</p>
+                <p>Review dated results for the selections that have been settled.</p>
+                <a class="feature-link" href="results.php">Open results history <?= svgIcon('chevron-right') ?></a>
             </div>
             <div class="feature-card">
-                <span class="feature-icon">🔔</span>
+                <span class="feature-icon"><?= svgIcon('bell') ?></span>
                 <h3>Real-Time Updates</h3>
                 <p>Instant notifications for new games and announcements.</p>
             </div>
             <div class="feature-card">
-                <span class="feature-icon">💬</span>
+                <span class="feature-icon"><?= svgIcon('message') ?></span>
                 <h3>24/7 Support</h3>
                 <p>Dedicated support via Telegram and WhatsApp.</p>
             </div>
@@ -91,8 +93,8 @@ $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
     <footer class="landing-footer">
         <p>&copy; <?= date('Y') ?> <?= SITE_NAME ?> — All rights reserved.</p>
         <div class="footer-links">
-            <a href="<?= e($telegramLink) ?>" target="_blank">💬 Telegram</a>
-            <a href="<?= e($whatsappLink) ?>" target="_blank">📱 WhatsApp</a>
+            <a href="<?= e($telegramLink) ?>" target="_blank" rel="noopener noreferrer"><?= svgIcon('message') ?> Telegram</a>
+            <a href="<?= e($whatsappLink) ?>" target="_blank" rel="noopener noreferrer"><?= svgIcon('phone') ?> WhatsApp</a>
         </div>
     </footer>
 </div>

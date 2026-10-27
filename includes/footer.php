@@ -6,8 +6,8 @@ $whatsappLink = getSiteSetting($pdo, 'whatsapp_link') ?? 'https://wa.me/40700000
         <div class="footer-content">
             <p>&copy; <?= date('Y') ?> <a href="<?= SITE_URL ?>"><?= SITE_NAME ?></a> — All rights reserved.</p>
             <div class="footer-links">
-                <a href="<?= e($telegramLink) ?>" target="_blank" class="social-link telegram-link">💬 Telegram</a>
-                <a href="<?= e($whatsappLink) ?>" target="_blank" class="social-link whatsapp-link">📱 WhatsApp</a>
+                <a href="<?= e($telegramLink) ?>" target="_blank" rel="noopener noreferrer" class="social-link telegram-link"><?= svgIcon('message') ?> Telegram</a>
+                <a href="<?= e($whatsappLink) ?>" target="_blank" rel="noopener noreferrer" class="social-link whatsapp-link"><?= svgIcon('phone') ?> WhatsApp</a>
             </div>
         </div>
     </footer>

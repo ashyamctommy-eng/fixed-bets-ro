@@ -1,5 +1,5 @@
 /* ============================================================
-   MAIN STYLESHEET - FIXED BETS RO 🇷🇴
+   MAIN STYLESHEET - FIXED BETS RO
    Dark Theme | Gold Accents | Professional Betting
    ============================================================ */
 
@@ -684,12 +684,12 @@ img {
    THEME SYSTEM OVERRIDES
    ============================================================ */
 
-/* --- Dark Gold Theme (🏆 Dark Gold - Default) --- */
+/* --- Dark Gold Theme (Default) --- */
 body.theme-dark {
     /* Fallback values are already on :root */
 }
 
-/* --- Light Theme (☀️ Modern Light) --- */
+/* --- Light Theme (Modern Light) --- */
 body.theme-light {
     --bg-dark: #f3f4f6;
     --bg-card: #ffffff;
@@ -755,7 +755,7 @@ body.theme-light .notif-item:hover {
     background: #f9fafb;
 }
 
-/* --- Cyber Neon Theme (🧪 Cyber Emerald) --- */
+/* --- Cyber Neon Theme (Cyber Emerald) --- */
 body.theme-neon {
     --bg-dark: #04060f;
     --bg-card: #080c1e;
@@ -811,6 +811,14 @@ body.theme-neon .game-notes {
 }
 
 /* Inline SVG icon styles for high-end look */
+.ui-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: 0 0 auto;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .nav-svg {
     width: 20px;
     height: 20px;
@@ -824,4 +832,84 @@ body.theme-neon .game-notes {
 /* Support hover transitions */
 .nav-item:hover .nav-svg {
     transform: scale(1.1);
+}
+
+.btn .ui-icon,
+.alert .ui-icon,
+.badge .ui-icon,
+.social-link .ui-icon,
+.footer-links .ui-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 215, 0, 0.26);
+    border-radius: 18px;
+    background: rgba(255, 215, 0, 0.06);
+    color: var(--gold);
+}
+
+.brand-mark .ui-icon {
+    width: 38px;
+    height: 38px;
+}
+
+.feature-icon {
+    color: var(--gold);
+}
+
+.feature-icon .ui-icon {
+    width: 42px;
+    height: 42px;
+    stroke-width: 1.6;
+}
+
+.feature-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.feature-link .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.login-logo .ui-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--gold);
+}
+
+.login-back .ui-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.status-badge {
+    gap: 0.4rem;
+}
+
+.status-svg-icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.empty-icon-svg {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.75rem;
+    color: var(--gold);
+    stroke-width: 1.5;
 }

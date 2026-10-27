@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // USER - VIP GAMES
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -20,7 +20,7 @@ $totalPages = ceil($totalGames / $perPage);
 
 $games = $pdo->prepare("
     SELECT * FROM vip_games WHERE is_archived = 0 
-    ORDER BY created_at DESC 
+    ORDER BY match_date DESC, match_time DESC, created_at DESC
     LIMIT ? OFFSET ?
 ");
 $games->execute([$perPage, $offset]);
@@ -32,7 +32,7 @@ require_once __DIR__ . '/../includes/user_header.php';
 
 <div class="dash-card">
     <div class="dash-card-header">
-        <h3>🎯 VIP Games</h3>
+        <h3><?= svgIcon('target') ?> VIP Picks</h3>
         <span style="color: var(--text-muted); font-size: 0.85rem;"><?= $totalGames ?> total</span>
     </div>
     <div class="dash-card-body">
@@ -43,7 +43,7 @@ require_once __DIR__ . '/../includes/user_header.php';
                 <div>
                     <div class="game-match"><?= e($game['match_name']) ?></div>
                     <?php if ($game['league']): ?>
-                    <div class="game-league">🏆 <?= e($game['league']) ?></div>
+                    <div class="game-league"><?= svgIcon('trophy') ?> <?= e($game['league']) ?></div>
                     <?php endif; ?>
                 </div>
                 <div style="text-align: right;">
@@ -55,7 +55,7 @@ require_once __DIR__ . '/../includes/user_header.php';
             </div>
             
             <div style="font-size: 1.05rem; color: var(--gold); font-weight: 700; margin-bottom: 0.75rem; padding: 0.5rem 0; border-top: 1px solid var(--border-color);">
-                🎯 <?= e($game['selection']) ?>
+                <?= svgIcon('target') ?> <?= e($game['selection']) ?>
             </div>
             
             <div class="game-details">
@@ -66,7 +66,7 @@ require_once __DIR__ . '/../includes/user_header.php';
                 <?php if ($game['match_time']): ?>
                 <div class="game-detail">
                     <span class="game-detail-label">Time</span>
-                    <span class="game-detail-value">⏰ <?= $game['match_time'] ?></span>
+                    <span class="game-detail-value"><?= svgIcon('clock') ?> <?= e(substr((string)$game['match_time'], 0, 5)) ?></span>
                 </div>
                 <?php endif; ?>
                 <div class="game-detail">
@@ -77,6 +77,12 @@ require_once __DIR__ . '/../includes/user_header.php';
                     <span class="game-detail-label">Result</span>
                     <span class="game-detail-value"><?= getResultBadge($game['result_status']) ?></span>
                 </div>
+                <?php if (!empty($game['final_score'])): ?>
+                <div class="game-detail">
+                    <span class="game-detail-label">Final score</span>
+                    <span class="game-detail-value"><?= e($game['final_score']) ?></span>
+                </div>
+                <?php endif; ?>
                 <div class="game-detail">
                     <span class="game-detail-label">Posted</span>
                     <span class="game-detail-value" style="font-size: 0.8rem; color: var(--text-muted);">
@@ -87,7 +93,7 @@ require_once __DIR__ . '/../includes/user_header.php';
             
             <?php if ($game['notes']): ?>
             <div class="game-notes">
-                <strong style="color: var(--text-secondary);">📝 Notes:</strong><br>
+                <strong style="color: var(--text-secondary);"><?= svgIcon('message') ?> Notes:</strong><br>
                 <?= nl2br(e($game['notes'])) ?>
             </div>
             <?php endif; ?>
@@ -110,7 +116,7 @@ require_once __DIR__ . '/../includes/user_header.php';
         
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">🎯</span>
+            <?= svgIcon('target', 'empty-icon-svg') ?>
             <p>No VIP games available yet. Check back soon for premium picks!</p>
         </div>
         <?php endif; ?>

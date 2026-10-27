@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // ADMIN - NOTIFICATION MANAGEMENT
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -93,13 +93,13 @@ $notifications = $pdo->query("
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
 
-<?php if ($error): ?><div class="alert alert-danger"><span>❌</span> <?= $error ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><span>✅</span> <?= $success ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= svgIcon('x') ?> <?= $error ?></div><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success"><?= svgIcon('check') ?> <?= $success ?></div><?php endif; ?>
 
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
     <!-- Personal Notification -->
     <div class="card">
-        <div class="card-header"><h2>👤 Personal Notification</h2></div>
+        <div class="card-header"><h2><?= svgIcon('user') ?> Personal notification</h2></div>
         <div class="card-body">
             <form method="POST">
                 <?= csrfField() ?>
@@ -125,20 +125,20 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Priority</label>
                     <select name="priority">
-                        <option value="normal">📌 Normal</option>
-                        <option value="high">⚠️ High</option>
-                        <option value="urgent">🚨 Urgent</option>
-                        <option value="low">ℹ️ Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">📨 Send Notification</button>
+                <button type="submit" class="btn btn-primary btn-block"><?= svgIcon('send') ?> Send notification</button>
             </form>
         </div>
     </div>
 
     <!-- Global Notification -->
     <div class="card">
-        <div class="card-header"><h2>🌍 Global Notification</h2></div>
+        <div class="card-header"><h2><?= svgIcon('globe') ?> Global notification</h2></div>
         <div class="card-body">
             <form method="POST">
                 <?= csrfField() ?>
@@ -155,13 +155,13 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Priority</label>
                     <select name="priority">
-                        <option value="normal">📌 Normal</option>
-                        <option value="high">⚠️ High</option>
-                        <option value="urgent">🚨 Urgent</option>
-                        <option value="low">ℹ️ Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">🌍 Send to All Users</button>
+                <button type="submit" class="btn btn-primary btn-block"><?= svgIcon('globe') ?> Send to all users</button>
             </form>
         </div>
     </div>
@@ -170,7 +170,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <!-- Notification History -->
 <div class="card">
     <div class="card-header">
-        <h2>📋 Notification History</h2>
+        <h2><?= svgIcon('history') ?> Notification history</h2>
     </div>
     <div class="card-body">
         <?php if (count($notifications) > 0): ?>
@@ -193,7 +193,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                         <strong><?= e($n['title']) ?></strong>
                     </td>
                     <td>
-                        <?= $n['type'] === 'global' ? '<span class="badge badge-info">🌍 Global</span>' : '<span class="badge badge-warning">👤 Personal</span>' ?>
+                        <?= $n['type'] === 'global' ? '<span class="badge badge-info">' . svgIcon('globe') . ' Global</span>' : '<span class="badge badge-warning">' . svgIcon('user') . ' Personal</span>' ?>
                     </td>
                     <td style="font-size: 0.85rem;">
                         <?= $n['type'] === 'global' ? 'All Users' : e($n['user_name'] ?? 'Deleted User') ?>
@@ -202,19 +202,19 @@ require_once __DIR__ . '/../includes/admin_header.php';
                         <span class="announcement-priority <?= $n['priority'] ?>"><?= e($n['priority']) ?></span>
                     </td>
                     <td style="font-size: 0.85rem;">
-                        <?= $n['type'] === 'personal' ? ($n['is_read'] ? '✅ Read' : '📩 Unread') : '—' ?>
+                        <?= $n['type'] === 'personal' ? ($n['is_read'] ? svgIcon('check') . ' Read' : svgIcon('mail') . ' Unread') : '—' ?>
                     </td>
                     <td style="font-size: 0.8rem; color: var(--text-muted);">
                         <?= formatDateTime($n['created_at'], 'd M H:i') ?>
                     </td>
                     <td>
                         <div class="actions" style="display: flex; gap: 4px;">
-                            <button class="btn btn-sm btn-secondary" onclick="editNotif(<?= $n['id'] ?>)">✏️</button>
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Edit notification" title="Edit notification" onclick="editNotif(<?= (int)$n['id'] ?>)"><?= svgIcon('edit') ?></button>
                             <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this notification?');">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete_notification">
                                 <input type="hidden" name="notification_id" value="<?= $n['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                <button type="submit" class="btn btn-sm btn-danger icon-button" aria-label="Delete notification" title="Delete notification"><?= svgIcon('trash') ?></button>
                             </form>
                         </div>
                     </td>
@@ -224,7 +224,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
         </table>
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">🔔</span>
+            <?= svgIcon('bell', 'empty-icon-svg') ?>
             <p>No notifications sent yet.</p>
         </div>
         <?php endif; ?>
@@ -236,7 +236,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <div class="modal">
         <form method="POST">
             <div class="modal-header">
-                <h3>✏️ Edit Notification</h3>
+                <h3><?= svgIcon('edit') ?> Edit notification</h3>
                 <button class="modal-close" onclick="closeModal('editNotifModal')">&times;</button>
             </div>
             <div class="modal-body">
@@ -255,16 +255,16 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <div class="form-group">
                     <label>Priority</label>
                     <select name="priority" id="en_priority">
-                        <option value="normal">📌 Normal</option>
-                        <option value="high">⚠️ High</option>
-                        <option value="urgent">🚨 Urgent</option>
-                        <option value="low">ℹ️ Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="low">Low</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editNotifModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Update</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Save changes</button>
             </div>
         </form>
     </div>

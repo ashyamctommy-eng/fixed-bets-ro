@@ -1,5 +1,5 @@
 /* ============================================================
-   USER DASHBOARD CSS - FIXED BETS RO 🇷🇴
+   USER DASHBOARD CSS - FIXED BETS RO
    ============================================================ */
 
 /* --- Dashboard Layout --- */
@@ -726,4 +726,55 @@
     .dash-card-body {
         padding: 1rem;
     }
+}
+
+.dash-card-header h3 .ui-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--gold);
+}
+
+.game-league .ui-icon,
+.game-notes .ui-icon,
+.announcement-date .ui-icon,
+.result-league .ui-icon,
+.result-selection .ui-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.notif-icon .ui-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--gold);
+}
+
+.stat-icon-svg {
+    width: 30px;
+    height: 30px;
+    stroke-width: 1.6;
+}
+
+.settled-score {
+    display: inline-block;
+    margin-top: 0.3rem;
+    color: var(--text-primary);
+    font-size: 0.83rem;
+    font-weight: 750;
+}
+
+.restricted-icon .ui-icon {
+    width: 54px;
+    height: 54px;
+    color: var(--gold);
+}
+
+.status-preview-icon {
+    margin-bottom: 0.5rem;
+    color: var(--gold);
+}
+
+.status-preview-icon .ui-icon {
+    width: 40px;
+    height: 40px;
 }

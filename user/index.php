@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // USER DASHBOARD
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -50,19 +50,19 @@ require_once __DIR__ . '/../includes/user_header.php';
 
 <!-- Welcome Section -->
 <div class="welcome-card">
-    <div class="welcome-title">👋 Welcome back, <?= e($user['full_name']) ?>!</div>
+    <div class="welcome-title">Welcome back, <?= e($user['full_name']) ?>.</div>
     <div class="welcome-subtitle">You are logged in as <strong>@<?= e($user['username']) ?></strong></div>
     <div class="welcome-badges">
         <?php if ($status): ?>
         <span class="badge" style="background: <?= e($status['color']) ?>; font-size: 0.9rem; padding: 6px 16px;">
-            <?= e($status['icon']) ?> <?= e($status['title']) ?>
+            <?= statusSvgIcon($status['icon'], $status['name']) ?> <?= e($status['title']) ?>
         </span>
         <?php endif; ?>
         
         <?php if ($hasVIPAccess): ?>
-        <span class="badge badge-gold" style="font-size: 0.9rem; padding: 6px 16px;">⭐ VIP Active</span>
+        <span class="badge badge-gold" style="font-size: 0.9rem; padding: 6px 16px;"><?= svgIcon('star') ?> VIP Active</span>
         <?php else: ?>
-        <span class="badge badge-danger" style="font-size: 0.9rem; padding: 6px 16px;">🔒 VIP Inactive</span>
+        <span class="badge badge-danger" style="font-size: 0.9rem; padding: 6px 16px;"><?= svgIcon('lock') ?> VIP Inactive</span>
         <?php endif; ?>
     </div>
 </div>
@@ -70,7 +70,7 @@ require_once __DIR__ . '/../includes/user_header.php';
 <?php if (!$hasVIPAccess && $status): ?>
 <!-- Restricted Access Message -->
 <div class="restricted-card" style="margin-bottom: 2rem;">
-    <div style="font-size: 3rem; margin-bottom: 1rem;"><?= e($status['icon'] ?? '🔒') ?></div>
+    <div class="restricted-icon"><?= statusSvgIcon($status['icon'] ?? '', $status['name'] ?? '') ?></div>
     <h2 style="color: <?= e($status['color'] ?? '#dc3545') ?>; margin-bottom: 0.75rem;">
         <?= e($status['title'] ?? 'Access Restricted') ?>
     </h2>
@@ -82,8 +82,8 @@ require_once __DIR__ . '/../includes/user_header.php';
         $tg = getSiteSetting($pdo, 'telegram_link') ?? '#';
         $wa = getSiteSetting($pdo, 'whatsapp_link') ?? '#';
         ?>
-        <a href="<?= e($tg) ?>" target="_blank" class="btn btn-telegram">💬 Telegram Support</a>
-        <a href="<?= e($wa) ?>" target="_blank" class="btn btn-whatsapp">📱 WhatsApp Support</a>
+        <a href="<?= e($tg) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-telegram"><?= svgIcon('message') ?> Telegram support</a>
+        <a href="<?= e($wa) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp"><?= svgIcon('phone') ?> WhatsApp support</a>
     </div>
 </div>
 <?php endif; ?>
@@ -93,7 +93,7 @@ require_once __DIR__ . '/../includes/user_header.php';
     <!-- Recent Games -->
     <div class="dash-card dash-grid-full">
         <div class="dash-card-header">
-            <h3>🎯 Latest VIP Games</h3>
+            <h3><?= svgIcon('target') ?> Latest VIP Picks</h3>
             <a href="games.php" class="btn btn-sm btn-secondary">View All</a>
         </div>
         <div class="dash-card-body">
@@ -114,7 +114,7 @@ require_once __DIR__ . '/../includes/user_header.php';
                     </div>
                 </div>
                 <div style="color: var(--gold); font-weight: 600; margin-bottom: 0.5rem;">
-                    🎯 <?= e($game['selection']) ?>
+                    <?= svgIcon('target') ?> <?= e($game['selection']) ?>
                 </div>
                 <div class="game-details">
                     <div class="game-detail">
@@ -145,7 +145,7 @@ require_once __DIR__ . '/../includes/user_header.php';
     <!-- Announcements -->
     <div class="dash-card">
         <div class="dash-card-header">
-            <h3>📢 Announcements</h3>
+            <h3><?= svgIcon('megaphone') ?> Announcements</h3>
             <a href="announcements.php" class="btn btn-sm btn-secondary">View All</a>
         </div>
         <div class="dash-card-body">
@@ -154,7 +154,7 @@ require_once __DIR__ . '/../includes/user_header.php';
             <div class="announcement-card <?= $a['priority'] ?>" style="margin-bottom: 0.75rem;">
                 <div class="announcement-title"><?= e($a['title']) ?></div>
                 <div class="announcement-message"><?= nl2br(e($a['message'])) ?></div>
-                <div class="announcement-date">📅 <?= formatDateTime($a['created_at']) ?></div>
+                <div class="announcement-date"><?= svgIcon('calendar') ?> <?= formatDateTime($a['created_at']) ?></div>
             </div>
             <?php endforeach; ?>
             <?php else: ?>
@@ -166,14 +166,14 @@ require_once __DIR__ . '/../includes/user_header.php';
     <!-- Notifications -->
     <div class="dash-card">
         <div class="dash-card-header">
-            <h3>🔔 Recent Notifications</h3>
+            <h3><?= svgIcon('bell') ?> Recent Notifications</h3>
             <a href="notifications.php" class="btn btn-sm btn-secondary">View All</a>
         </div>
         <div class="dash-card-body" style="padding: 0;">
             <?php if (count($userNotifs) > 0): ?>
             <?php foreach ($userNotifs as $n): ?>
             <div class="notif-item unread" data-id="<?= $n['id'] ?>" style="padding: 1rem 1.25rem;">
-                <div class="notif-icon">📩</div>
+                <div class="notif-icon"><?= svgIcon('mail') ?></div>
                 <div class="notif-content">
                     <div class="notif-title"><?= e($n['title']) ?></div>
                     <div class="notif-message"><?= e(mb_substr($n['message'], 0, 80)) ?><?= mb_strlen($n['message']) > 80 ? '...' : '' ?></div>

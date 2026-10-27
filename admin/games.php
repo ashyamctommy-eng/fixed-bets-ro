@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // ADMIN - GAME MANAGEMENT
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -52,22 +52,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $matchTime = $_POST['match_time'] ?? '';
                 $confidence = sanitize($_POST['confidence'] ?? '');
                 $notes = sanitize($_POST['notes'] ?? '');
-                $resultStatus = $_POST['result_status'] ?? 'pending';
                 
                 if ($gameId <= 0 || empty($matchName) || empty($selection) || $odds <= 0) {
                     $error = 'All required fields must be filled.';
                 } else {
-                    $stmt = $pdo->prepare("UPDATE vip_games SET match_name=?, league=?, selection=?, odds=?, match_date=?, match_time=?, confidence=?, notes=?, result_status=? WHERE id=?");
-                    $stmt->execute([$matchName, $league, $selection, $odds, $matchDate, $matchTime, $confidence, $notes, $resultStatus, $gameId]);
-                    $success = 'Game updated!';
+                    $existingGame = $pdo->prepare("SELECT result_status FROM vip_games WHERE id = ?");
+                    $existingGame->execute([$gameId]);
+                    $existingResult = $existingGame->fetchColumn();
+                    if ($existingResult === false) {
+                        $error = 'Pick not found.';
+                    } elseif ($existingResult !== 'pending') {
+                        $error = 'Settled picks are locked to protect the published history. Use the result correction flow for outcome changes.';
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE vip_games SET match_name=?, league=?, selection=?, odds=?, match_date=?, match_time=?, confidence=?, notes=? WHERE id=?");
+                        $stmt->execute([$matchName, $league, $selection, $odds, $matchDate, $matchTime, $confidence, $notes, $gameId]);
+                        $success = 'Pick details updated.';
+                    }
+                }
+                break;
+
+            case 'settle_result':
+                $gameId = (int)($_POST['game_id'] ?? 0);
+                $resultStatus = $_POST['result_status'] ?? '';
+                $finalScore = trim(strip_tags((string)($_POST['final_score'] ?? '')));
+                $correctionReason = trim(strip_tags((string)($_POST['correction_reason'] ?? '')));
+                $validResults = ['win', 'loss', 'void', 'push'];
+
+                if ($gameId <= 0 || !in_array($resultStatus, $validResults, true)) {
+                    $error = 'Choose a valid final outcome.';
+                } elseif (strlen($finalScore) > 32) {
+                    $error = 'Final score must be 32 characters or fewer.';
+                } elseif (in_array($resultStatus, ['win', 'loss'], true) && $finalScore === '') {
+                    $error = 'Enter the final score for a win or loss.';
+                } else {
+                    $lookup = $pdo->prepare("SELECT id, match_name, result_status, final_score FROM vip_games WHERE id = ?");
+                    $lookup->execute([$gameId]);
+                    $existing = $lookup->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$existing) {
+                        $error = 'Pick not found.';
+                    } elseif (
+                        $existing['result_status'] !== 'pending'
+                        && ($existing['result_status'] !== $resultStatus || (string)($existing['final_score'] ?? '') !== $finalScore)
+                        && $correctionReason === ''
+                    ) {
+                        $error = 'Add a correction reason before changing a settled result.';
+                    } else {
+                        $settledAt = date('Y-m-d H:i:s');
+                        $stmt = $pdo->prepare("UPDATE vip_games SET result_status = ?, final_score = ?, settled_at = ? WHERE id = ?");
+                        $stmt->execute([$resultStatus, $finalScore !== '' ? $finalScore : null, $settledAt, $gameId]);
+
+                        $oldResult = $existing['result_status'];
+                        $oldScore = $existing['final_score'] ?? 'not recorded';
+                        $detail = "Pick #{$gameId} ({$existing['match_name']}): {$oldResult} / {$oldScore} -> {$resultStatus} / " . ($finalScore !== '' ? $finalScore : 'no score');
+                        if ($correctionReason !== '') {
+                            $detail .= "; correction reason: {$correctionReason}";
+                        }
+                        try {
+                            logActivity($pdo, (int)$_SESSION['user_id'], 'settle_pick', $detail);
+                        } catch (Throwable $e) {
+                            error_log('Pick settlement audit log failed: ' . $e->getMessage());
+                        }
+
+                        $success = $oldResult === 'pending' ? 'Pick result settled.' : 'Settled result corrected and logged.';
+                        unset($_SESSION[CSRF_TOKEN_NAME]);
+                    }
                 }
                 break;
             
             case 'delete_game':
                 $gameId = (int)($_POST['game_id'] ?? 0);
                 if ($gameId > 0) {
-                    $pdo->prepare("DELETE FROM vip_games WHERE id = ?")->execute([$gameId]);
-                    $success = 'Game deleted.';
+                    $lookup = $pdo->prepare("SELECT result_status FROM vip_games WHERE id = ?");
+                    $lookup->execute([$gameId]);
+                    $status = $lookup->fetchColumn();
+                    if ($status === false) {
+                        $error = 'Pick not found.';
+                    } elseif ($status !== 'pending') {
+                        $error = 'Settled picks cannot be deleted. Archive the pick to keep its public record.';
+                    } else {
+                        $pdo->prepare("DELETE FROM vip_games WHERE id = ?")->execute([$gameId]);
+                        $success = 'Unsettled pick deleted.';
+                    }
                 }
                 break;
             
@@ -82,68 +148,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Filter
+// Search and filters
+$allowedFilters = ['active', 'archived', 'pending_result', 'win', 'loss', 'void', 'push'];
 $filter = $_GET['filter'] ?? 'active';
-$where = "WHERE is_archived = 0";
-if ($filter === 'archived') $where = "WHERE is_archived = 1";
-if ($filter === 'win') $where = "WHERE result_status = 'win' AND is_archived = 0";
-if ($filter === 'loss') $where = "WHERE result_status = 'loss' AND is_archived = 0";
-if ($filter === 'pending_result') $where = "WHERE result_status = 'pending' AND is_archived = 0";
+if (!in_array($filter, $allowedFilters, true)) $filter = 'active';
+$search = trim($_GET['q'] ?? '');
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 20;
+$conditions = [];
+$params = [];
 
-$games = $pdo->query("SELECT * FROM vip_games $where ORDER BY created_at DESC")->fetchAll();
+if ($filter === 'archived') {
+    $conditions[] = 'is_archived = 1';
+} else {
+    $conditions[] = 'is_archived = 0';
+    if ($filter === 'pending_result') $conditions[] = "result_status = 'pending'";
+    elseif (in_array($filter, ['win', 'loss', 'void', 'push'], true)) {
+        $conditions[] = 'result_status = ?';
+        $params[] = $filter;
+    }
+}
+if ($search !== '') {
+    $conditions[] = '(match_name LIKE ? OR league LIKE ? OR selection LIKE ?)';
+    $term = '%' . $search . '%';
+    array_push($params, $term, $term, $term);
+}
+
+$where = 'WHERE ' . implode(' AND ', $conditions);
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM vip_games $where");
+$countStmt->execute($params);
+$totalGames = (int)$countStmt->fetchColumn();
+$totalPages = max(1, (int)ceil($totalGames / $perPage));
+if ($page > $totalPages) $page = $totalPages;
+$offset = ($page - 1) * $perPage;
+$gamesStmt = $pdo->prepare("SELECT * FROM vip_games $where ORDER BY match_date DESC, created_at DESC LIMIT $perPage OFFSET $offset");
+$gamesStmt->execute($params);
+$games = $gamesStmt->fetchAll(PDO::FETCH_ASSOC);
 
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
 
-<?php if ($error): ?><div class="alert alert-danger"><span>❌</span> <?= $error ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><span>✅</span> <?= $success ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= svgIcon('x') ?> <?= $error ?></div><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success"><?= svgIcon('check') ?> <?= $success ?></div><?php endif; ?>
 
 <div class="card">
     <div class="card-header">
-        <h2>🎯 VIP Games</h2>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <div class="filter-bar">
-                <a href="?filter=active" class="btn btn-sm <?= $filter === 'active' ? 'btn-primary' : 'btn-secondary' ?>">Active</a>
-                <a href="?filter=pending_result" class="btn btn-sm <?= $filter === 'pending_result' ? 'btn-primary' : 'btn-secondary' ?>">⏳ Pending</a>
-                <a href="?filter=win" class="btn btn-sm <?= $filter === 'win' ? 'btn-primary' : 'btn-secondary' ?>">✅ Wins</a>
-                <a href="?filter=loss" class="btn btn-sm <?= $filter === 'loss' ? 'btn-primary' : 'btn-secondary' ?>">❌ Losses</a>
-                <a href="?filter=archived" class="btn btn-sm <?= $filter === 'archived' ? 'btn-primary' : 'btn-secondary' ?>">📦 Archived</a>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('addGameModal')">➕ Add Game</button>
+        <div>
+            <h2>VIP Picks</h2>
+            <p class="card-subtitle">Publish selections, then record the actual final outcome.</p>
         </div>
+        <button class="btn btn-primary btn-sm" type="button" onclick="openModal('addGameModal')"><?= svgIcon('plus') ?> Add pick</button>
     </div>
     <div class="card-body">
+        <form method="GET" class="games-toolbar">
+            <label class="search-field">
+                <?= svgIcon('search') ?>
+                <input type="search" name="q" value="<?= e($search) ?>" placeholder="Search match, league, or selection" aria-label="Search picks">
+            </label>
+            <select name="filter" aria-label="Filter picks">
+                <option value="active" <?= $filter === 'active' ? 'selected' : '' ?>>Active picks</option>
+                <option value="pending_result" <?= $filter === 'pending_result' ? 'selected' : '' ?>>Pending results</option>
+                <option value="win" <?= $filter === 'win' ? 'selected' : '' ?>>Wins</option>
+                <option value="loss" <?= $filter === 'loss' ? 'selected' : '' ?>>Losses</option>
+                <option value="void" <?= $filter === 'void' ? 'selected' : '' ?>>Voids</option>
+                <option value="push" <?= $filter === 'push' ? 'selected' : '' ?>>Pushes</option>
+                <option value="archived" <?= $filter === 'archived' ? 'selected' : '' ?>>Archived</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" type="submit"><?= svgIcon('filter') ?> Apply</button>
+        </form>
         <?php if (count($games) > 0): ?>
-        <table class="data-table">
+        <div class="table-scroll">
+        <table class="data-table games-table">
             <thead>
                 <tr>
                     <th>Match</th>
                     <th>Selection</th>
                     <th>Odds</th>
-                    <th>Date</th>
-                    <th>Confidence</th>
-                    <th>Result</th>
+                    <th>Kickoff</th>
+                    <th>Level</th>
+                    <th>Outcome / Score</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($games as $game): ?>
                 <tr>
-                    <td>
+                    <td data-label="Match">
                         <strong><?= e($game['match_name']) ?></strong><br>
-                        <small style="color: var(--text-muted);"><?= e($game['league']) ?></small>
+                        <small style="color: var(--text-muted);"><?= e($game['league'] ?: 'League not set') ?></small>
                     </td>
-                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <td data-label="Selection" class="games-selection">
                         <?= e($game['selection']) ?>
                     </td>
-                    <td style="color: var(--gold); font-weight: 800; font-size: 1.1rem;">
+                    <td data-label="Odds" class="games-odds">
                         <?= number_format($game['odds'], 2) ?>
                     </td>
-                    <td style="font-size: 0.85rem;">
+                    <td data-label="Kickoff" class="games-kickoff">
                         <?= formatDate($game['match_date'], 'd M Y') ?><br>
                         <small style="color: var(--text-muted);"><?= $game['match_time'] ? formatDate($game['match_time'], 'H:i') : '—' ?></small>
                     </td>
-                    <td>
+                    <td data-label="Level">
                         <?php if ($game['confidence']): ?>
                         <span class="game-confidence <?= strtolower($game['confidence']) ?>">
                             <?= e($game['confidence']) ?>
@@ -152,22 +256,35 @@ require_once __DIR__ . '/../includes/admin_header.php';
                         <span class="badge badge-secondary">—</span>
                         <?php endif; ?>
                     </td>
-                    <td><?= getResultBadge($game['result_status']) ?></td>
-                    <td>
-                        <div class="actions" style="display: flex; gap: 4px;">
-                            <button class="btn btn-sm btn-secondary" onclick="editGame(<?= $game['id'] ?>)">✏️</button>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this game?');">
+                    <td data-label="Outcome / Score">
+                        <?= getResultBadge($game['result_status']) ?>
+                        <?php if (!empty($game['final_score'])): ?>
+                        <div class="settled-score"><?= e($game['final_score']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($game['settled_at'])): ?>
+                        <small class="settled-time">Settled <?= formatDateTime($game['settled_at'], 'd M, H:i') ?></small>
+                        <?php endif; ?>
+                    </td>
+                    <td data-label="Actions">
+                        <div class="actions game-actions">
+                            <?php if ($game['result_status'] === 'pending'): ?>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="settleGame(<?= (int)$game['id'] ?>)"><?= svgIcon('check') ?> Settle</button>
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Edit pick" title="Edit pick" onclick="editGame(<?= (int)$game['id'] ?>)"><?= svgIcon('edit') ?></button>
+                            <form method="POST" onsubmit="return confirm('Delete this unsettled pick?');">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete_game">
-                                <input type="hidden" name="game_id" value="<?= $game['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                <input type="hidden" name="game_id" value="<?= (int)$game['id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-danger icon-button" aria-label="Delete pick" title="Delete pick"><?= svgIcon('trash') ?></button>
                             </form>
+                            <?php else: ?>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="settleGame(<?= (int)$game['id'] ?>)"><?= svgIcon('edit') ?> Correct result</button>
+                            <?php endif; ?>
                             <?php if (!$game['is_archived']): ?>
-                            <form method="POST" style="display:inline;">
+                            <form method="POST">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="archive_game">
-                                <input type="hidden" name="game_id" value="<?= $game['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-secondary">📦</button>
+                                <input type="hidden" name="game_id" value="<?= (int)$game['id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-secondary icon-button" aria-label="Archive pick" title="Archive pick"><?= svgIcon('archive') ?></button>
                             </form>
                             <?php endif; ?>
                         </div>
@@ -176,10 +293,19 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
+        <?php if ($totalPages > 1): ?>
+        <nav class="pagination" aria-label="Pick pages">
+            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <?php $pageQuery = ['filter' => $filter, 'page' => $i]; if ($search !== '') $pageQuery['q'] = $search; ?>
+            <a href="?<?= e(http_build_query($pageQuery)) ?>" class="btn btn-sm <?= $i === $page ? 'btn-primary' : 'btn-secondary' ?>" <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
+            <?php endfor; ?>
+        </nav>
+        <?php endif; ?>
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">🎯</span>
-            <p>No games found in this category. Add your first VIP game!</p>
+            <?= svgIcon('target', 'empty-icon-svg') ?>
+            <p>No picks match these filters. Adjust your search or add a pick.</p>
         </div>
         <?php endif; ?>
     </div>
@@ -190,8 +316,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <div class="modal">
         <form method="POST">
             <div class="modal-header">
-                <h3>➕ Add VIP Game</h3>
-                <button class="modal-close" onclick="closeModal('addGameModal')">&times;</button>
+                <h3><?= svgIcon('plus') ?> Add VIP pick</h3>
+                <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('addGameModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <?= csrfField() ?>
@@ -229,9 +355,9 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <label>Confidence Level</label>
                     <select name="confidence">
                         <option value="">— Select —</option>
-                        <option value="High">🔥 High</option>
-                        <option value="Medium">⚡ Medium</option>
-                        <option value="Low">⚠️ Low</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -241,7 +367,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('addGameModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">✅ Add Game</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('plus') ?> Publish pick</button>
             </div>
         </form>
     </div>
@@ -252,8 +378,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <div class="modal">
         <form method="POST">
             <div class="modal-header">
-                <h3>✏️ Edit Game</h3>
-                <button class="modal-close" onclick="closeModal('editGameModal')">&times;</button>
+                <h3><?= svgIcon('edit') ?> Edit pick</h3>
+                <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('editGameModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <?= csrfField() ?>
@@ -288,24 +414,14 @@ require_once __DIR__ . '/../includes/admin_header.php';
                         <input type="time" name="match_time" id="eg_time">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Confidence</label>
-                        <select name="confidence" id="eg_confidence">
-                            <option value="">— Select —</option>
-                            <option value="High">🔥 High</option>
-                            <option value="Medium">⚡ Medium</option>
-                            <option value="Low">⚠️ Low</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Result Status</label>
-                        <select name="result_status" id="eg_result">
-                            <option value="pending">⏳ Pending</option>
-                            <option value="win">✅ Win</option>
-                            <option value="loss">❌ Loss</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Confidence</label>
+                    <select name="confidence" id="eg_confidence">
+                        <option value="">— Select —</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Notes</label>
@@ -314,14 +430,60 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editGameModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Update Game</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Save pick</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SETTLE / CORRECT RESULT MODAL -->
+<div class="modal-backdrop" id="settleResultModal">
+    <div class="modal">
+        <form method="POST" id="settleResultForm">
+            <div class="modal-header">
+                <div>
+                    <h3><?= svgIcon('check') ?> <span id="settleModalTitle">Settle result</span></h3>
+                    <p class="card-subtitle" id="settleMatchName"></p>
+                </div>
+                <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('settleResultModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="settle_result">
+                <input type="hidden" name="game_id" id="settleGameId">
+                <div class="form-group">
+                    <label for="settleOutcome">Final outcome *</label>
+                    <select name="result_status" id="settleOutcome" required>
+                        <option value="win">Win</option>
+                        <option value="loss">Loss</option>
+                        <option value="void">Void</option>
+                        <option value="push">Push</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="settleScore">Final score</label>
+                    <input type="text" name="final_score" id="settleScore" maxlength="32" placeholder="e.g. 2-1">
+                    <small class="form-hint">Required for a win or loss. Leave blank for void or push if no score is available.</small>
+                </div>
+                <div class="form-group" id="correctionReasonGroup" hidden>
+                    <label for="correctionReason">Correction reason *</label>
+                    <textarea name="correction_reason" id="correctionReason" maxlength="500" placeholder="Explain why the recorded result is being corrected."></textarea>
+                </div>
+                <div class="settlement-note">
+                    <?= svgIcon('shield-check') ?>
+                    <span>The published selection and odds stay unchanged. Corrections are recorded in the admin activity log.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('settleResultModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Save outcome</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-const gamesData = <?= json_encode($games) ?>;
+const gamesData = <?= json_encode($games, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
 
 function editGame(id) {
     const g = gamesData.find(game => game.id == id);
@@ -334,9 +496,23 @@ function editGame(id) {
     document.getElementById('eg_date').value = g.match_date;
     document.getElementById('eg_time').value = g.match_time || '';
     document.getElementById('eg_confidence').value = g.confidence || '';
-    document.getElementById('eg_result').value = g.result_status;
     document.getElementById('eg_notes').value = g.notes || '';
     openModal('editGameModal');
+}
+
+function settleGame(id) {
+    const g = gamesData.find(game => game.id == id);
+    if (!g) return;
+    const correcting = g.result_status !== 'pending';
+    document.getElementById('settleGameId').value = g.id;
+    document.getElementById('settleMatchName').textContent = g.match_name;
+    document.getElementById('settleOutcome').value = correcting ? g.result_status : 'win';
+    document.getElementById('settleScore').value = g.final_score || '';
+    document.getElementById('settleModalTitle').textContent = correcting ? 'Correct result' : 'Settle result';
+    document.getElementById('correctionReasonGroup').hidden = !correcting;
+    document.getElementById('correctionReason').required = correcting;
+    document.getElementById('correctionReason').value = '';
+    openModal('settleResultModal');
 }
 </script>
 

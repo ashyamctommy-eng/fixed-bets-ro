@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // USER - NOTIFICATIONS
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -54,10 +54,10 @@ require_once __DIR__ . '/../includes/user_header.php';
 
 <div class="dash-card">
     <div class="dash-card-header">
-        <h3>🔔 Notifications</h3>
+        <h3><?= svgIcon('bell') ?> Notifications</h3>
         <div style="display: flex; gap: 0.5rem;">
             <?php if ($unreadCount > 0): ?>
-            <a href="?mark_all=1" class="btn btn-sm btn-primary">✅ Mark All Read</a>
+            <a href="?mark_all=1" class="btn btn-sm btn-primary"><?= svgIcon('check') ?> Mark all read</a>
             <?php endif; ?>
         </div>
     </div>
@@ -65,29 +65,29 @@ require_once __DIR__ . '/../includes/user_header.php';
         <?php if (count($allNotifs) > 0): ?>
         <?php foreach ($allNotifs as $n): ?>
         <div class="notif-item <?= $n['is_read'] ? '' : 'unread' ?>" data-id="<?= $n['id'] ?>">
-            <div class="notif-icon"><?= $n['type'] === 'global' ? '🌍' : '📩' ?></div>
+            <div class="notif-icon"><?= svgIcon($n['type'] === 'global' ? 'globe' : 'mail') ?></div>
             <div class="notif-content">
                 <div class="notif-title"><?= e($n['title']) ?></div>
                 <div class="notif-message"><?= nl2br(e($n['message'])) ?></div>
                 <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 4px;">
-                    <span class="notif-time">📅 <?= timeElapsed($n['created_at']) ?></span>
+                    <span class="notif-time"><?= svgIcon('clock') ?> <?= timeElapsed($n['created_at']) ?></span>
                     <span class="announcement-priority <?= $n['priority'] ?>"><?= e($n['priority']) ?></span>
                     <?php if ($n['type'] === 'global'): ?>
-                    <span class="badge badge-info" style="font-size: 0.7rem;">🌍 All Users</span>
+                    <span class="badge badge-info" style="font-size: 0.7rem;"><?= svgIcon('globe') ?> All users</span>
                     <?php endif; ?>
                 </div>
                 <div class="notif-actions">
                     <?php if (!$n['is_read']): ?>
-                    <a href="?mark_read=<?= $n['id'] ?>" class="btn btn-sm btn-primary">✅ Mark Read</a>
+                    <a href="?mark_read=<?= $n['id'] ?>" class="btn btn-sm btn-primary"><?= svgIcon('check') ?> Mark read</a>
                     <?php endif; ?>
-                    <a href="?delete=<?= $n['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this notification?')">🗑️ Delete</a>
+                    <a href="?delete=<?= $n['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this notification?')"><?= svgIcon('trash') ?> Delete</a>
                 </div>
             </div>
         </div>
         <?php endforeach; ?>
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">🔔</span>
+            <?= svgIcon('bell', 'empty-icon-svg') ?>
             <p>No notifications yet.</p>
         </div>
         <?php endif; ?>

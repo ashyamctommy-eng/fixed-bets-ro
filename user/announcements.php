@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // USER - ANNOUNCEMENTS
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../includes/user_header.php';
 
 <div class="dash-card">
     <div class="dash-card-header">
-        <h3>📢 Announcements</h3>
+        <h3><?= svgIcon('megaphone') ?> Announcements</h3>
     </div>
     <div class="dash-card-body">
         <?php if (count($announcements) > 0): ?>
@@ -32,12 +32,12 @@ require_once __DIR__ . '/../includes/user_header.php';
                 <span class="announcement-priority <?= $a['priority'] ?>"><?= e($a['priority']) ?></span>
             </div>
             <div class="announcement-message"><?= nl2br(e($a['message'])) ?></div>
-            <div class="announcement-date">📅 <?= formatDateTime($a['created_at']) ?></div>
+            <div class="announcement-date"><?= svgIcon('calendar') ?> <?= formatDateTime($a['created_at']) ?></div>
         </div>
         <?php endforeach; ?>
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">📢</span>
+            <?= svgIcon('megaphone', 'empty-icon-svg') ?>
             <p>No announcements at this time.</p>
         </div>
         <?php endif; ?>

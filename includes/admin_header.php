@@ -10,7 +10,7 @@
     <?php if (isset($extraCss)): foreach ((array)$extraCss as $css): ?>
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/<?= $css ?>">
     <?php endforeach; endif; ?>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇷🇴</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="<?= SITE_URL ?>/assets/favicon.svg">
 </head>
 <?php
 $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
@@ -20,8 +20,8 @@ $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
     <!-- Admin Sidebar -->
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-header">
-            <h2>⚙️ Admin</h2>
-            <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+            <h2><?= svgIcon('settings') ?> Admin</h2>
+            <button type="button" class="sidebar-toggle" aria-label="Toggle navigation" onclick="toggleSidebar()"><?= svgIcon('menu') ?></button>
         </div>
         <nav class="sidebar-nav">
             <a href="<?= SITE_URL ?>/admin/index.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) === 'index.php' ? 'active' : '' ?>">
@@ -55,12 +55,12 @@ $themeClass = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
     <main class="admin-main">
         <header class="admin-topbar">
             <div class="topbar-left">
-                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                <button type="button" class="mobile-menu-btn" aria-label="Toggle navigation" onclick="toggleSidebar()"><?= svgIcon('menu') ?></button>
                 <h1><?= e($pageTitle ?? 'Dashboard') ?></h1>
             </div>
             <div class="topbar-right">
-                <span class="admin-user">👑 <?= e($_SESSION['full_name'] ?? 'Admin') ?></span>
-                <a href="<?= SITE_URL ?>/" class="topbar-link" target="_blank">🔗 View Site</a>
+                <span class="admin-user"><?= svgIcon('crown') ?> <?= e($_SESSION['full_name'] ?? 'Admin') ?></span>
+                <a href="<?= SITE_URL ?>/" class="topbar-link" target="_blank" rel="noopener noreferrer"><?= svgIcon('external') ?> View site</a>
             </div>
         </header>
         <div class="admin-content">

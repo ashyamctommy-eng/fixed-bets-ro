@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // ADMIN - USER MANAGEMENT
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -137,45 +137,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Pagination
 $page = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 20;
-$offset = ($page - 1) * $perPage;
+$search = trim($_GET['q'] ?? '');
+$vipFilter = $_GET['vip'] ?? 'all';
+if (!in_array($vipFilter, ['all', 'active', 'inactive'], true)) $vipFilter = 'all';
+$statusFilter = max(0, (int)($_GET['status'] ?? 0));
 
-$totalUsersCount = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'vip_user'")->fetchColumn();
-$totalPages = ceil($totalUsersCount / $perPage);
+// Get all statuses for dropdown
+$statuses = $pdo->query("SELECT * FROM custom_statuses WHERE is_active = 1 ORDER BY name ASC")->fetchAll();
+
+$userConditions = ["u.role = 'vip_user'"];
+$userParams = [];
+if ($search !== '') {
+    $userConditions[] = '(u.full_name LIKE ? OR u.username LIKE ? OR u.email LIKE ?)';
+    $term = '%' . $search . '%';
+    array_push($userParams, $term, $term, $term);
+}
+if ($vipFilter === 'active') $userConditions[] = 'u.vip_access = 1';
+if ($vipFilter === 'inactive') $userConditions[] = 'u.vip_access = 0';
+if ($statusFilter > 0) {
+    $userConditions[] = 'u.status_id = ?';
+    $userParams[] = $statusFilter;
+}
+$userWhere = 'WHERE ' . implode(' AND ', $userConditions);
+
+$countUsers = $pdo->prepare("SELECT COUNT(*) FROM users u $userWhere");
+$countUsers->execute($userParams);
+$totalUsersCount = (int)$countUsers->fetchColumn();
+$totalPages = max(1, (int)ceil($totalUsersCount / $perPage));
+if ($page > $totalPages) $page = $totalPages;
+$offset = ($page - 1) * $perPage;
 
 $users = $pdo->prepare("
     SELECT u.*, cs.name as status_name, cs.color as status_color, cs.icon as status_icon,
            cs.title as status_title, cs.message as status_message
     FROM users u
     LEFT JOIN custom_statuses cs ON u.status_id = cs.id
-    WHERE u.role = 'vip_user'
+    $userWhere
     ORDER BY u.created_at DESC
-    LIMIT ? OFFSET ?
+    LIMIT $perPage OFFSET $offset
 ");
-$users->execute([$perPage, $offset]);
-$usersList = $users->fetchAll();
-
-// Get all statuses for dropdown
-$statuses = $pdo->query("SELECT * FROM custom_statuses WHERE is_active = 1 ORDER BY name ASC")->fetchAll();
+$users->execute($userParams);
+$usersList = $users->fetchAll(PDO::FETCH_ASSOC);
 
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
 
 <?php if ($error): ?>
-<div class="alert alert-danger"><span>❌</span> <?= $error ?></div>
+<div class="alert alert-danger"><?= svgIcon('x') ?> <?= $error ?></div>
 <?php endif; ?>
 
 <?php if ($success): ?>
-<div class="alert alert-success"><span>✅</span> <?= $success ?></div>
+<div class="alert alert-success"><?= svgIcon('check') ?> <?= $success ?></div>
 <?php endif; ?>
 
 <div class="card">
     <div class="card-header">
-        <h2>👥 All Users</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('createUserModal')">➕ Create User</button>
+        <h2><?= svgIcon('users') ?> Members</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="openModal('createUserModal')"><?= svgIcon('plus') ?> Create member</button>
     </div>
     <div class="card-body">
+        <form method="GET" class="games-toolbar member-toolbar">
+            <label class="search-field">
+                <?= svgIcon('search') ?>
+                <input type="search" name="q" value="<?= e($search) ?>" placeholder="Search name, username, or email" aria-label="Search members">
+            </label>
+            <select name="vip" aria-label="Filter by VIP access">
+                <option value="all" <?= $vipFilter === 'all' ? 'selected' : '' ?>>All access</option>
+                <option value="active" <?= $vipFilter === 'active' ? 'selected' : '' ?>>VIP active</option>
+                <option value="inactive" <?= $vipFilter === 'inactive' ? 'selected' : '' ?>>VIP inactive</option>
+            </select>
+            <select name="status" aria-label="Filter by member status">
+                <option value="0">All statuses</option>
+                <?php foreach ($statuses as $statusOption): ?>
+                <option value="<?= (int)$statusOption['id'] ?>" <?= $statusFilter === (int)$statusOption['id'] ? 'selected' : '' ?>><?= e($statusOption['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button class="btn btn-secondary btn-sm" type="submit"><?= svgIcon('filter') ?> Apply</button>
+        </form>
         <?php if (count($usersList) > 0): ?>
-        <table class="data-table">
+        <div class="table-scroll">
+        <table class="data-table members-table">
             <thead>
                 <tr>
                     <th>User</th>
@@ -190,51 +231,51 @@ require_once __DIR__ . '/../includes/admin_header.php';
             <tbody>
                 <?php foreach ($usersList as $user): ?>
                 <tr>
-                    <td>
+                    <td data-label="Member">
                         <strong><?= e($user['full_name']) ?></strong><br>
                         <small style="color: var(--text-muted);">@<?= e($user['username']) ?></small>
                     </td>
-                    <td>
-                        <?php if ($user['email']): ?><small>📧 <?= e($user['email']) ?></small><br><?php endif; ?>
-                        <?php if ($user['telegram']): ?><small>💬 <?= e($user['telegram']) ?></small><br><?php endif; ?>
-                        <?php if ($user['whatsapp']): ?><small>📱 <?= e($user['whatsapp']) ?></small><?php endif; ?>
+                    <td data-label="Contact">
+                        <?php if ($user['email']): ?><small><?= svgIcon('mail') ?> <?= e($user['email']) ?></small><br><?php endif; ?>
+                        <?php if ($user['telegram']): ?><small><?= svgIcon('message') ?> <?= e($user['telegram']) ?></small><br><?php endif; ?>
+                        <?php if ($user['whatsapp']): ?><small><?= svgIcon('phone') ?> <?= e($user['whatsapp']) ?></small><?php endif; ?>
                         <?php if (!$user['email'] && !$user['telegram'] && !$user['whatsapp']): ?>
                         <small style="color: var(--text-muted);">—</small>
                         <?php endif; ?>
                     </td>
-                    <td>
+                    <td data-label="Status">
                         <?php if ($user['status_name']): ?>
                         <span class="badge" style="background: <?= e($user['status_color']) ?>;">
-                            <?= e($user['status_icon']) ?> <?= e($user['status_name']) ?>
+                            <?= statusSvgIcon($user['status_icon'], $user['status_name']) ?> <?= e($user['status_name']) ?>
                         </span>
                         <?php else: ?>
                         <span class="badge badge-secondary">—</span>
                         <?php endif; ?>
                     </td>
-                    <td>
+                    <td data-label="VIP access">
                         <span class="vip-badge <?= $user['vip_access'] ? 'active' : 'inactive' ?>">
-                            <?= $user['vip_access'] ? '⭐ ON' : '❌ OFF' ?>
+                            <?= $user['vip_access'] ? svgIcon('check') . ' ON' : svgIcon('x') . ' OFF' ?>
                         </span>
                     </td>
-                    <td style="font-size: 0.85rem; color: var(--text-muted);">
+                    <td data-label="Last login" style="font-size: 0.85rem; color: var(--text-muted);">
                         <?= $user['last_login'] ? formatDateTime($user['last_login'], 'd M Y H:i') : 'Never' ?>
                     </td>
-                    <td style="font-size: 0.85rem; color: var(--text-muted);">
+                    <td data-label="Joined" style="font-size: 0.85rem; color: var(--text-muted);">
                         <?= formatDate($user['created_at'], 'd M Y') ?>
                     </td>
-                    <td>
-                        <div class="actions" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-secondary" onclick="editUser(<?= $user['id'] ?>)">✏️</button>
-                            <button class="btn btn-sm btn-secondary" onclick="resetPass(<?= $user['id'] ?>)">🔑</button>
-                            <button class="btn btn-sm btn-secondary" onclick="toggleVip(<?= $user['id'] ?>, <?= $user['vip_access'] ?>)">
-                                <?= $user['vip_access'] ? '🔴' : '⭐' ?>
+                    <td data-label="Actions">
+                        <div class="actions member-actions">
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Edit member" title="Edit member" onclick="editUser(<?= (int)$user['id'] ?>)"><?= svgIcon('edit') ?></button>
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Reset password" title="Reset password" onclick="resetPass(<?= (int)$user['id'] ?>)"><?= svgIcon('key') ?></button>
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Toggle VIP access" title="Toggle VIP access" onclick="toggleVip(<?= (int)$user['id'] ?>, <?= (int)$user['vip_access'] ?>)">
+                                <?= $user['vip_access'] ? svgIcon('lock') : svgIcon('star') ?>
                             </button>
-                            <button class="btn btn-sm btn-secondary" onclick="assignStatus(<?= $user['id'] ?>)">🏷️</button>
-                            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete user <?= e(addslashes($user['full_name'])) ?>?');">
+                            <button type="button" class="btn btn-sm btn-secondary icon-button" aria-label="Assign status" title="Assign status" onclick="assignStatus(<?= (int)$user['id'] ?>)"><?= svgIcon('tag') ?></button>
+                            <form method="POST" onsubmit="return confirm('Delete this member?');">
                                 <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete_user">
                                 <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                <button type="submit" class="btn btn-sm btn-danger icon-button" aria-label="Delete member" title="Delete member"><?= svgIcon('trash') ?></button>
                             </form>
                         </div>
                     </td>
@@ -242,19 +283,21 @@ require_once __DIR__ . '/../includes/admin_header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
 
         <?php if ($totalPages > 1): ?>
-        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;">
+            <nav class="pagination" aria-label="Member pages">
             <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-            <a href="?page=<?= $i ?>" class="btn btn-sm <?= $i === $page ? 'btn-primary' : 'btn-secondary' ?>"><?= $i ?></a>
+            <?php $pageQuery = ['page' => $i, 'vip' => $vipFilter, 'status' => $statusFilter]; if ($search !== '') $pageQuery['q'] = $search; ?>
+            <a href="?<?= e(http_build_query($pageQuery)) ?>" class="btn btn-sm <?= $i === $page ? 'btn-primary' : 'btn-secondary' ?>" <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
             <?php endfor; ?>
-        </div>
+            </nav>
         <?php endif; ?>
 
         <?php else: ?>
         <div class="empty-state">
-            <span class="empty-icon">👥</span>
-            <p>No users yet. Click "Create User" to add your first VIP member.</p>
+            <?= svgIcon('users', 'empty-icon-svg') ?>
+            <p>No members match these filters. Create a member or adjust your search.</p>
         </div>
         <?php endif; ?>
     </div>
@@ -264,8 +307,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <div class="modal-backdrop" id="createUserModal">
     <div class="modal">
         <div class="modal-header">
-            <h3>➕ Create New User</h3>
-            <button class="modal-close" onclick="closeModal('createUserModal')">&times;</button>
+            <h3><?= svgIcon('plus') ?> Create new member</h3>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('createUserModal')">&times;</button>
         </div>
         <form method="POST">
             <div class="modal-body">
@@ -284,7 +327,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <label>Password * (min 6 characters)</label>
                     <input type="text" name="password" required placeholder="Generate or type password" minlength="6">
                     <small style="color: var(--text-muted);">
-                        <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 4px;" onclick="generatePass('password')">🎲 Generate</button>
+                        <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 4px;" onclick="generatePass('password')"><?= svgIcon('refresh') ?> Generate password</button>
                     </small>
                 </div>
                 <div class="form-group">
@@ -302,7 +345,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('createUserModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">✅ Create User</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('plus') ?> Create member</button>
             </div>
         </form>
     </div>
@@ -312,8 +355,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <div class="modal-backdrop" id="editUserModal">
     <div class="modal">
         <div class="modal-header">
-            <h3>✏️ Edit User</h3>
-            <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+            <h3><?= svgIcon('edit') ?> Edit member</h3>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('editUserModal')">&times;</button>
         </div>
         <form method="POST">
             <div class="modal-body">
@@ -340,7 +383,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Save changes</button>
             </div>
         </form>
     </div>
@@ -350,8 +393,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <div class="modal-backdrop" id="resetPassModal">
     <div class="modal">
         <div class="modal-header">
-            <h3>🔑 Reset Password</h3>
-            <button class="modal-close" onclick="closeModal('resetPassModal')">&times;</button>
+            <h3><?= svgIcon('key') ?> Reset password</h3>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('resetPassModal')">&times;</button>
         </div>
         <form method="POST">
             <div class="modal-body">
@@ -363,13 +406,13 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <label>New Password * (min 6 characters)</label>
                     <input type="text" name="new_password" id="newPassword" required minlength="6">
                     <small style="color: var(--text-muted);">
-                        <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 4px;" onclick="generatePass('newPassword')">🎲 Generate</button>
+                        <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 4px;" onclick="generatePass('newPassword')"><?= svgIcon('refresh') ?> Generate password</button>
                     </small>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('resetPassModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">🔑 Reset Password</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('key') ?> Reset password</button>
             </div>
         </form>
     </div>
@@ -379,8 +422,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <div class="modal-backdrop" id="toggleVipModal">
     <div class="modal">
         <div class="modal-header">
-            <h3>⭐ Toggle VIP Access</h3>
-            <button class="modal-close" onclick="closeModal('toggleVipModal')">&times;</button>
+            <h3><?= svgIcon('star') ?> Toggle VIP access</h3>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('toggleVipModal')">&times;</button>
         </div>
         <form method="POST">
             <div class="modal-body">
@@ -393,7 +436,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('toggleVipModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">⭐ Toggle VIP</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('star') ?> Toggle VIP</button>
             </div>
         </form>
     </div>
@@ -403,8 +446,8 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <div class="modal-backdrop" id="assignStatusModal">
     <div class="modal">
         <div class="modal-header">
-            <h3>🏷️ Assign Status</h3>
-            <button class="modal-close" onclick="closeModal('assignStatusModal')">&times;</button>
+            <h3><?= svgIcon('tag') ?> Assign status</h3>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeModal('assignStatusModal')">&times;</button>
         </div>
         <form method="POST">
             <div class="modal-body">
@@ -418,7 +461,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                         <option value="">— No Status —</option>
                         <?php foreach ($statuses as $s): ?>
                         <option value="<?= $s['id'] ?>" style="background: var(--bg-card);">
-                            <?= e($s['icon']) ?> <?= e($s['name']) ?>
+                            <?= e($s['name']) ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
@@ -426,7 +469,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('assignStatusModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">✅ Assign</button>
+                <button type="submit" class="btn btn-primary"><?= svgIcon('check') ?> Assign status</button>
             </div>
         </form>
     </div>
@@ -434,7 +477,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
 
 <script>
 // Pass user data to JS
-const usersData = <?= json_encode($usersList) ?>;
+const usersData = <?= json_encode($usersList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
 
 function editUser(id) {
     const user = usersData.find(u => u.id == id);

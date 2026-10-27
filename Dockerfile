@@ -1,5 +1,5 @@
 # ============================================================
-# DOCKERFILE — FIXED BETS RO 🇷🇴
+# DOCKERFILE — FIXED BETS RO
 # PHP 8.2 + Apache + MySQL for Railway
 # ============================================================
 

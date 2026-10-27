@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // ADMIN - SITE SETTINGS
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -70,14 +70,14 @@ $dashboardTheme = getSiteSetting($pdo, 'dashboard_theme') ?? 'dark';
 require_once __DIR__ . '/../includes/admin_header.php';
 ?>
 
-<?php if ($error): ?><div class="alert alert-danger"><span>❌</span> <?= $error ?></div><?php endif; ?>
-<?php if ($success): ?><div class="alert alert-success"><span>✅</span> <?= $success ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert alert-danger"><?= svgIcon('x') ?> <?= $error ?></div><?php endif; ?>
+<?php if ($success): ?><div class="alert alert-success"><?= svgIcon('check') ?> <?= $success ?></div><?php endif; ?>
 
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
     <!-- Site Settings -->
     <div class="card">
         <div class="card-header">
-            <h2>⚙️ Site Settings</h2>
+            <h2><?= svgIcon('settings') ?> Site Settings</h2>
         </div>
         <div class="card-body">
             <form method="POST">
@@ -113,7 +113,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     </select>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">💾 Save Settings</button>
+                <button type="submit" class="btn btn-primary btn-block"><?= svgIcon('check') ?> Save settings</button>
             </form>
         </div>
     </div>
@@ -121,7 +121,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
     <!-- Change Password -->
     <div class="card">
         <div class="card-header">
-            <h2>🔑 Change Admin Password</h2>
+            <h2><?= svgIcon('key') ?> Change Admin Password</h2>
         </div>
         <div class="card-body">
             <form method="POST">
@@ -141,7 +141,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
                     <input type="password" name="confirm_password" required minlength="6">
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">🔑 Change Password</button>
+                <button type="submit" class="btn btn-primary btn-block"><?= svgIcon('key') ?> Change password</button>
             </form>
         </div>
     </div>
@@ -150,7 +150,7 @@ require_once __DIR__ . '/../includes/admin_header.php';
 <!-- Quick Info -->
 <div class="card">
     <div class="card-header">
-        <h2>📋 Site Information</h2>
+        <h2><?= svgIcon('info') ?> Site Information</h2>
     </div>
     <div class="card-body">
         <table class="data-table">

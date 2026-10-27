@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // RESTRICTED ACCESS PAGE
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -30,7 +30,7 @@ require_once __DIR__ . '/../includes/user_header.php';
 
 <div class="restricted-page">
     <div class="restricted-card">
-        <div class="restricted-icon">🔒</div>
+        <div class="restricted-icon"><?= svgIcon('lock') ?></div>
         <h1 class="restricted-title">Access Restricted</h1>
         <p class="restricted-message">
             Your VIP account has limited access. Please contact support for assistance.
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../includes/user_header.php';
         <?php if ($status): ?>
         <div class="restricted-status" style="border-color: <?= e($status['color']) ?>;">
             <div class="restricted-status-title" style="color: <?= e($status['color']) ?>;">
-                <?= e($status['icon']) ?> <?= e($status['title']) ?>
+                <?= statusSvgIcon($status['icon'], $status['name']) ?> <?= e($status['title']) ?>
             </div>
             <div class="restricted-status-msg">
                 <?= nl2br(e($status['message'])) ?>
@@ -47,7 +47,7 @@ require_once __DIR__ . '/../includes/user_header.php';
         </div>
         <?php else: ?>
         <div class="restricted-status">
-            <div class="restricted-status-title" style="color: var(--gold);">🔒 VIP Not Active</div>
+            <div class="restricted-status-title" style="color: var(--gold);"><?= svgIcon('lock') ?> VIP Not Active</div>
             <div class="restricted-status-msg">
                 Your VIP access has not been enabled yet. Please contact support to activate your membership.
             </div>
@@ -67,7 +67,7 @@ require_once __DIR__ . '/../includes/user_header.php';
         
         <?php if (count($userNotifs) > 0): ?>
         <div style="margin-bottom: 1.5rem; text-align: left;">
-            <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);">📩 Your Notifications</h3>
+            <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-primary);"><?= svgIcon('mail') ?> Your Notifications</h3>
             <?php foreach ($userNotifs as $n): ?>
             <div class="notif-item" style="padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 0.5rem;">
                 <div class="notif-content">
@@ -80,8 +80,8 @@ require_once __DIR__ . '/../includes/user_header.php';
         <?php endif; ?>
         
         <div class="restricted-support">
-            <a href="<?= e($telegramLink) ?>" target="_blank" class="btn btn-telegram btn-lg">💬 Telegram Support</a>
-            <a href="<?= e($whatsappLink) ?>" target="_blank" class="btn btn-whatsapp btn-lg">📱 WhatsApp Support</a>
+            <a href="<?= e($telegramLink) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-telegram btn-lg"><?= svgIcon('message') ?> Telegram support</a>
+            <a href="<?= e($whatsappLink) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-lg"><?= svgIcon('phone') ?> WhatsApp support</a>
         </div>
     </div>
 </div>

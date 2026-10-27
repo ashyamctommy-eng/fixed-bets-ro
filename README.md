@@ -1,4 +1,4 @@
-# 🇷🇴 FIXED BETS RO — VIP Betting Platform
+# FIXED BETS RO — VIP Betting Platform
 
 A private-access betting platform. Admins create and manage user accounts; users do not self-register.
 
@@ -45,15 +45,23 @@ Delete install.php from htdocs/ after setup. Keep config/install.lock; it preven
 
 ## Updating an existing InfinityFree site
 
-1. Back up the website files and export the database before an update.
-2. Check the changed files in the GitHub commit and upload only the runtime files that changed.
-3. Keep the live config/database.php. The copy in the repository contains placeholders and would break the live database connection if uploaded over it.
-4. Do not run install.php against an existing database, and do not re-import sql/schema.sql into a live database. Schema imports are for a fresh database; they do not update existing passwords.
-5. README.md is documentation and does not need to be uploaded to the website.
+1. Back up the current `htdocs/` files and export the live database from phpMyAdmin.
+2. Download the latest repository ZIP, extract it, and upload the changed runtime files to `htdocs/`, keeping the same folder structure.
+3. Keep the live `config/database.php`. The copy in the repository contains placeholders and would break the live database connection if uploaded over it.
+4. Do not run `install.php` against an existing database, and do not re-import `sql/schema.sql` into a live database. The app adds the new pick-result columns and supported outcomes through a non-destructive schema upgrade on the first request after the PHP files are updated.
+5. Leave `config/install.lock` in place. Keep a database backup until you have verified login, admin logout, pick settlement, and the public results page.
+6. README.md is documentation and does not need to be uploaded to the website.
+
+### Pick results and public history
+
+In **Admin → Games**, use **Settle** to record a pick's outcome and final score after the match. If you correct a previously settled pick, enter a correction reason; the change is written to the activity log. Settled picks cannot be deleted, and archived settled picks remain in the public record.
+
+Visitors can review settled outcomes at `/results.php`. The public page shows wins, losses, voids, and pushes; the displayed win rate excludes voids and pushes and is calculated as wins divided by wins plus losses.
 
 ## Admin login routes
 - Shared sign-in page for admins and VIP users: /login.php
 - Admin dashboard after successful sign-in: /admin/index.php
+- Public settled-pick history: /results.php
 
 The recommended InfinityFree setup is the installer above. If you manually import sql/schema.sql into a fresh database, its seed account is admin / Admin@123; change that password immediately. Never re-import the schema into an existing database to fix a login.
 

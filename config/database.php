@@ -1,10 +1,10 @@
 <?php
 // ============================================================
 // DATABASE CONFIGURATION
-// FIXED BETS RO 🇷🇴
+// FIXED BETS RO
 // ============================================================
 //
-// 👇 FOR INFINITYFREE — Edit the "MANUAL CONFIG" section below
+// FOR INFINITYFREE — Edit the "MANUAL CONFIG" section below
 //    with the MySQL details from your control panel.
 //
 //    Host format: sqlNNN.infinityfree.com
@@ -60,7 +60,7 @@ if ($railwayHost) {
     define('DB_CHARSET', 'utf8mb4');
 } else {
     // ============================================================
-    // 🔧 MANUAL CONFIG — EDIT THESE FOR INFINITYFREE
+    // MANUAL CONFIG — EDIT THESE FOR INFINITYFREE
     // ============================================================
     // Get these values from your InfinityFree control panel:
     //   MySQL Databases → (your database) → Details

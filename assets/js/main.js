@@ -1,5 +1,5 @@
 // ============================================================
-// MAIN JAVASCRIPT - FIXED BETS RO 🇷🇴
+// MAIN JAVASCRIPT - FIXED BETS RO
 // ============================================================
 
 /**
@@ -26,12 +26,13 @@ function showAlert(message, type = 'info') {
  */
 function getAlertIcon(type) {
     const icons = {
-        danger: '❌',
-        success: '✅',
-        info: 'ℹ️',
-        warning: '⚠️'
+        danger: '<path d="m6 6 12 12M18 6 6 18"/>',
+        success: '<path d="m5 12 4 4L19 6"/>',
+        info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+        warning: '<path d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-2.5L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>'
     };
-    return icons[type] || 'ℹ️';
+    const path = icons[type] || icons.info;
+    return `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 }
 
 /**

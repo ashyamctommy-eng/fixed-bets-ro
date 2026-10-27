@@ -1,5 +1,5 @@
 -- ============================================================
--- FIXED BETS RO 🇷🇴 - Database Schema
+-- FIXED BETS RO - Database Schema
 -- Complete VIP Betting Platform
 -- ============================================================
 
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS custom_statuses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    icon VARCHAR(10) NOT NULL DEFAULT '📋',
+    icon VARCHAR(10) NOT NULL DEFAULT 'tag',
     color VARCHAR(7) NOT NULL DEFAULT '#FFD700',
     title VARCHAR(100) NOT NULL,
     message TEXT NOT NULL,
@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS vip_games (
     match_time TIME NOT NULL,
     confidence VARCHAR(50) DEFAULT NULL,
     notes TEXT DEFAULT NULL,
-    result_status ENUM('win', 'loss', 'pending') NOT NULL DEFAULT 'pending',
+    result_status ENUM('win', 'loss', 'pending', 'void', 'push') NOT NULL DEFAULT 'pending',
+    final_score VARCHAR(32) DEFAULT NULL,
+    settled_at DATETIME DEFAULT NULL,
     is_archived TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_date (match_date),
@@ -150,19 +152,19 @@ VALUES ('Super Admin', 'admin', '$2y$10$cqc3X/MlLDJkqvuXvJ1syO8m9pFwQ/7gjUlq7DLL
 
 -- Insert default statuses
 INSERT INTO custom_statuses (name, icon, color, title, message, restrict_access) VALUES
-('Active', '✅', '#28a745', 'Account Active', 'Your account is fully active. Enjoy VIP betting!', 0),
-('Pending Setup', '⏳', '#ffc107', 'Account Pending Setup', 'Your account is being set up. Please wait for confirmation.', 1),
-('Payment Pending', '💳', '#ff9800', 'Payment Pending', 'Your payment is being processed. Access will be granted upon confirmation.', 1),
-('VIP Expired', '📅', '#dc3545', 'VIP Membership Expired', 'Your VIP membership has expired. Please contact support for renewal.', 1),
-('Verification Required', '⚠️', '#e83e8c', 'Verification Required', 'Your account requires verification before access can be granted.', 1),
-('Suspended', '🚫', '#dc3545', 'Account Suspended', 'Your account has been suspended. Please contact support.', 1),
-('Under Review', '🔍', '#17a2b8', 'Account Under Review', 'Your account is currently under review.', 1),
-('Account Restricted', '🔒', '#dc3545', 'Account Restricted', 'Your account currently has restricted access. Please contact support for assistance.', 1),
-('Renewal Required', '🔄', '#fd7e14', 'VIP Renewal Required', 'Your VIP membership has expired. Please contact support to renew access.', 1);
+('Active', 'check', '#28a745', 'Account Active', 'Your account is fully active. Enjoy VIP betting!', 0),
+('Pending Setup', 'clock', '#ffc107', 'Account Pending Setup', 'Your account is being set up. Please wait for confirmation.', 1),
+('Payment Pending', 'card', '#ff9800', 'Payment Pending', 'Your payment is being processed. Access will be granted upon confirmation.', 1),
+('VIP Expired', 'calendar', '#dc3545', 'VIP Membership Expired', 'Your VIP membership has expired. Please contact support for renewal.', 1),
+('Verification Required', 'shield', '#e83e8c', 'Verification Required', 'Your account requires verification before access can be granted.', 1),
+('Suspended', 'shield', '#dc3545', 'Account Suspended', 'Your account has been suspended. Please contact support.', 1),
+('Under Review', 'search', '#17a2b8', 'Account Under Review', 'Your account is currently under review.', 1),
+('Account Restricted', 'lock', '#dc3545', 'Account Restricted', 'Your account currently has restricted access. Please contact support for assistance.', 1),
+('Renewal Required', 'refresh', '#fd7e14', 'VIP Renewal Required', 'Your VIP membership has expired. Please contact support to renew access.', 1);
 
 -- Insert default site settings
 INSERT INTO site_settings (setting_key, setting_value) VALUES
-('site_name', 'FIXED BETS RO 🇷🇴'),
+('site_name', 'FIXED BETS RO'),
 ('site_logo', ''),
 ('telegram_link', 'https://t.me/fixedbetsro'),
 ('whatsapp_link', 'https://wa.me/40700000000'),
