@@ -1,114 +1,188 @@
 <?php
 // ============================================================
-// INSTALLATION SCRIPT - FIXED BETS RO 🇷🇴
-// Run ONCE after uploading files, then DELETE this file.
+// FIXED BETS RO - InfinityFree/shared-host installation wizard
+// Run once with an empty MySQL database, then delete this file.
 // ============================================================
 
-// Display errors
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+declare(strict_types=1);
 
-// Railway auto-detection notice
-$isRailway = (bool) getenv('RAILWAY_PUBLIC_DOMAIN');
+$lockPath = __DIR__ . '/config/install.lock';
+$installed = is_file($lockPath);
+$secureCookie = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'secure' => $secureCookie,
+    'httponly' => true,
+    'samesite' => 'Strict',
+]);
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+if (empty($_SESSION['install_csrf'])) {
+    $_SESSION['install_csrf'] = bin2hex(random_bytes(32));
+}
 
-$step = $_GET['step'] ?? 1;
+function installEscape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+$scheme = $secureCookie ? 'https' : 'http';
+$defaultSiteUrl = !empty($_SERVER['HTTP_HOST']) ? $scheme . '://' . $_SERVER['HTTP_HOST'] : 'https://example.com';
+$form = [
+    'db_host' => '',
+    'db_port' => '3306',
+    'db_name' => '',
+    'db_user' => '',
+    'admin_user' => 'admin',
+    'admin_email' => '',
+    'site_url' => $defaultSiteUrl,
+];
 $error = '';
-$success = '';
+$success = false;
+$lockWarning = false;
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $dbHost = trim($_POST['db_host'] ?? 'localhost');
-    $dbName = trim($_POST['db_name'] ?? 'fixed_bets_ro');
-    $dbUser = trim($_POST['db_user'] ?? 'root');
-    $dbPass = trim($_POST['db_pass'] ?? '');
-    $adminUser = trim($_POST['admin_user'] ?? 'admin');
-    $adminPass = trim($_POST['admin_pass'] ?? '');
-    $adminEmail = trim($_POST['admin_email'] ?? '');
-    $siteUrl = trim($_POST['site_url'] ?? (getenv('RAILWAY_PUBLIC_DOMAIN') ? 'https://' . getenv('RAILWAY_PUBLIC_DOMAIN') : 'http://localhost:8000'));
-    
-    try {
-        // Test database connection
-        $pdo = new PDO("mysql:host=$dbHost;charset=utf8mb4", $dbUser, $dbPass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-        ]);
-        
-        // Create database
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("USE `$dbName`");
-        
-        // Run schema
-        $schema = file_get_contents(__DIR__ . '/sql/schema.sql');
-        if ($schema) {
-            // Remove CREATE DATABASE and USE statements (already done)
-            $schema = preg_replace('/CREATE DATABASE.*?;/i', '', $schema);
-            $schema = preg_replace('/USE.*?;/i', '', $schema);
-            
-            // Execute statements one by one
-            $statements = array_filter(array_map('trim', explode(';', $schema)));
-            foreach ($statements as $stmt) {
-                if (!empty($stmt) && stripos($stmt, 'CREATE DATABASE') === false && stripos($stmt, 'USE ') === false) {
-                    $pdo->exec($stmt);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$installed) {
+    foreach (array_keys($form) as $key) {
+        $form[$key] = trim((string)($_POST[$key] ?? $form[$key]));
+    }
+    $dbPass = (string)($_POST['db_pass'] ?? '');
+    $adminPass = (string)($_POST['admin_pass'] ?? '');
+    $adminPassConfirm = (string)($_POST['admin_pass_confirm'] ?? '');
+
+    if (!hash_equals((string)$_SESSION['install_csrf'], (string)($_POST['csrf_token'] ?? ''))) {
+        $error = 'The form expired. Reload this page and try again.';
+    } elseif ($form['db_host'] === '' || !preg_match('/^[A-Za-z0-9.-]+$/', $form['db_host'])) {
+        $error = 'Enter the MySQL host shown in your InfinityFree control panel.';
+    } elseif (!preg_match('/^[A-Za-z0-9_]+$/', $form['db_name'])) {
+        $error = 'Enter the exact database name shown in your hosting control panel.';
+    } elseif ($form['db_user'] === '' || !ctype_digit($form['db_port']) || (int)$form['db_port'] < 1 || (int)$form['db_port'] > 65535) {
+        $error = 'Enter a valid database username and port.';
+    } elseif (strlen($form['admin_user']) < 3 || strlen($form['admin_user']) > 50) {
+        $error = 'The admin username must be between 3 and 50 characters.';
+    } elseif (strlen($adminPass) < 8) {
+        $error = 'Choose an admin password with at least 8 characters.';
+    } elseif (!hash_equals($adminPass, $adminPassConfirm)) {
+        $error = 'The admin passwords do not match.';
+    } elseif ($form['admin_email'] !== '' && !filter_var($form['admin_email'], FILTER_VALIDATE_EMAIL)) {
+        $error = 'Enter a valid email address or leave the email field blank.';
+    } elseif (!filter_var($form['site_url'], FILTER_VALIDATE_URL) || !in_array(strtolower((string)parse_url($form['site_url'], PHP_URL_SCHEME)), ['http', 'https'], true)) {
+        $error = 'Enter the full site URL, beginning with https:// or http://.';
+    } elseif (!is_dir(__DIR__ . '/config') || !is_writable(__DIR__ . '/config')) {
+        $error = 'The config folder must be writable during installation. Check its permissions in File Manager.';
+    } else {
+        $form['site_url'] = rtrim($form['site_url'], '/');
+        $configDir = __DIR__ . '/config';
+        $configPath = $configDir . '/database.php';
+        $tempConfigPath = $configDir . '/.database-install-' . bin2hex(random_bytes(8)) . '.tmp';
+
+        $configContent = "<?php\n";
+        $configContent .= "// Generated by install.php. Keep this file private.\n";
+        $configContent .= "define('DB_HOST', " . var_export($form['db_host'], true) . ");\n";
+        $configContent .= "define('DB_PORT', " . var_export($form['db_port'], true) . ");\n";
+        $configContent .= "define('DB_NAME', " . var_export($form['db_name'], true) . ");\n";
+        $configContent .= "define('DB_USER', " . var_export($form['db_user'], true) . ");\n";
+        $configContent .= "define('DB_PASS', " . var_export($dbPass, true) . ");\n";
+        $configContent .= "define('DB_CHARSET', 'utf8mb4');\n\n";
+        $configContent .= "try {\n";
+        $configContent .= "    \$pdo = new PDO(\"mysql:host=\" . DB_HOST . \";port=\" . DB_PORT . \";dbname=\" . DB_NAME . \";charset=\" . DB_CHARSET, DB_USER, DB_PASS, [\n";
+        $configContent .= "        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n";
+        $configContent .= "        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n";
+        $configContent .= "        PDO::ATTR_EMULATE_PREPARES => false,\n";
+        $configContent .= "    ]);\n";
+        $configContent .= "} catch (PDOException \$e) {\n";
+        $configContent .= "    error_log('Database connection failed: ' . \$e->getCode());\n";
+        $configContent .= "    http_response_code(500);\n";
+        $configContent .= "    exit('Database connection failed. Check the hosting database configuration.');\n";
+        $configContent .= "}\n";
+
+        try {
+            if (file_put_contents($tempConfigPath, $configContent, LOCK_EX) === false) {
+                throw new RuntimeException('Could not prepare the database config file. Check config folder permissions.');
+            }
+
+            // InfinityFree databases must be created in the control panel first.
+            // Connect directly to that database; this wizard never runs CREATE DATABASE.
+            $pdo = new PDO(
+                'mysql:host=' . $form['db_host'] . ';port=' . $form['db_port'] . ';dbname=' . $form['db_name'] . ';charset=utf8mb4',
+                $form['db_user'],
+                $dbPass,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            );
+
+            $existingUsers = $pdo->query("SHOW TABLES LIKE 'users'")->fetchColumn();
+            if ($existingUsers !== false) {
+                throw new RuntimeException('This database already has a users table. Choose a new, empty database; the installer will not overwrite an existing site.');
+            }
+
+            $schemaPath = __DIR__ . '/sql/schema.sql';
+            $schema = is_file($schemaPath) ? file_get_contents($schemaPath) : false;
+            if ($schema === false || trim($schema) === '') {
+                throw new RuntimeException('The sql/schema.sql file is missing or empty. Upload the complete project and try again.');
+            }
+
+            // The database already exists, often with an InfinityFree prefix.
+            // Remove only the schema file's database-selection statements.
+            $schema = preg_replace('/^[ \t]*CREATE\s+DATABASE\b[^;]*;[ \t]*/im', '', $schema);
+            $schema = preg_replace('/^[ \t]*USE\s+[^;]+;[ \t]*/im', '', $schema);
+            $schema = preg_replace('/^[ \t]*--.*$/m', '', $schema);
+            foreach (explode(';', (string)$schema) as $statement) {
+                $statement = trim($statement);
+                if ($statement !== '') {
+                    $pdo->exec($statement);
                 }
             }
-        }
-        
-        // Create admin account with provided password
-        $hashedPassword = password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => 10]);
-        $stmt = $pdo->prepare("UPDATE users SET username = ?, password = ?, email = ? WHERE role = 'admin' LIMIT 1");
-        $stmt->execute([$adminUser, $hashedPassword, $adminEmail]);
-        
-        // Update site URL
-        $stmt = $pdo->prepare("UPDATE site_settings SET setting_value = ? WHERE setting_key = 'site_url'");
-        $stmt->execute([$siteUrl]);
-        
-        // If no admin row existed, insert one
-        if ($stmt->rowCount() === 0) {
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, username, password, email, role, vip_access) VALUES (?, ?, ?, ?, 'admin', 1)");
-            $stmt->execute(['Super Admin', $adminUser, $hashedPassword, $adminEmail]);
-        }
-        
-        // Write config file
-        $configContent = <<<PHP
-<?php
-// ============================================================
-// DATABASE CONFIGURATION
-// FIXED BETS RO 🇷🇴
-// ============================================================
 
-define('DB_HOST', '$dbHost');
-define('DB_NAME', '$dbName');
-define('DB_USER', '$dbUser');
-define('DB_PASS', '$dbPass');
-define('DB_CHARSET', 'utf8mb4');
+            $admin = $pdo->query("SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")->fetch();
+            if (!$admin) {
+                throw new RuntimeException('The schema did not create an admin account. Confirm sql/schema.sql is the project version and try again with an empty database.');
+            }
 
-try {
-    \$pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET,
-        DB_USER,
-        DB_PASS,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]
-    );
-} catch (PDOException \$e) {
-    die("Database connection failed: " . \$e->getMessage());
-}
-PHP;
-        
-        file_put_contents(__DIR__ . '/config/database.php', $configContent);
-        
-        // Update config.php site URL
-        $configFile = file_get_contents(__DIR__ . '/config/config.php');
-        $configFile = preg_replace("/define\('SITE_URL', '.*?'\)/", "define('SITE_URL', '$siteUrl')", $configFile);
-        file_put_contents(__DIR__ . '/config/config.php', $configFile);
-        
-        $success = '✅ Installation complete!';
-        $step = 'done';
-        
-    } catch (Exception $e) {
-        $error = 'Error: ' . $e->getMessage();
+            $usernameCheck = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
+            $usernameCheck->execute([$form['admin_user']]);
+            $usernameOwner = $usernameCheck->fetchColumn();
+            if ($usernameOwner !== false && (int)$usernameOwner !== (int)$admin['id']) {
+                throw new RuntimeException('That username is already assigned to another account in the database. Choose a different admin username.');
+            }
+
+            $passwordHash = password_hash($adminPass, PASSWORD_DEFAULT);
+            $updateAdmin = $pdo->prepare('UPDATE users SET username = ?, password = ?, email = ? WHERE id = ?');
+            $updateAdmin->execute([
+                $form['admin_user'],
+                $passwordHash,
+                $form['admin_email'] !== '' ? $form['admin_email'] : null,
+                $admin['id'],
+            ]);
+
+            $saveSiteUrl = $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
+            $saveSiteUrl->execute(['site_url', $form['site_url']]);
+
+            if (!rename($tempConfigPath, $configPath)) {
+                throw new RuntimeException('The database tables and admin were created, but the config file could not be saved. Check config folder permissions before trying again.');
+            }
+
+            if (file_put_contents($lockPath, "Installation completed. Delete install.php now.\n", LOCK_EX) === false) {
+                $lockWarning = true;
+            }
+
+            $success = true;
+            $installed = true;
+            unset($_SESSION['install_csrf']);
+        } catch (RuntimeException $e) {
+            $error = $e->getMessage();
+        } catch (Throwable $e) {
+            error_log('Installer failed: ' . get_class($e) . ' / ' . $e->getCode());
+            $error = 'Setup failed. Verify the database host, name, username, password, and that the database is empty and already created in InfinityFree.';
+        } finally {
+            if (is_file($tempConfigPath)) {
+                @unlink($tempConfigPath);
+            }
+        }
     }
 }
 ?>
@@ -117,159 +191,77 @@ PHP;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Install - FIXED BETS RO 🇷🇴</title>
+    <title>Install - FIXED BETS RO</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0f;
-            color: #f0f0f0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-        .install-container {
-            width: 100%;
-            max-width: 560px;
-            background: #13131a;
-            border: 1px solid #2a2a3a;
-            border-radius: 16px;
-            padding: 2.5rem;
-        }
-        h1 { 
-            text-align: center; 
-            font-size: 1.75rem;
-            background: linear-gradient(135deg, #ffd700, #f0a500);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
-        .subtitle { text-align: center; color: #a0a0b0; margin-bottom: 2rem; font-size: 0.9rem; }
-        .form-group { margin-bottom: 1.25rem; }
-        label { display: block; margin-bottom: 0.5rem; color: #a0a0b0; font-size: 0.875rem; }
-        input, select {
-            width: 100%;
-            padding: 12px 16px;
-            background: #1a1a24;
-            border: 1px solid #2a2a3a;
-            border-radius: 8px;
-            color: #f0f0f0;
-            font-size: 1rem;
-        }
-        input:focus { outline: none; border-color: #ffd700; box-shadow: 0 0 0 3px rgba(255,215,0,0.1); }
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #ffd700, #f0a500);
-            color: #111;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-        .btn:hover { box-shadow: 0 4px 20px rgba(255,215,0,0.3); }
-        .alert { padding: 14px; border-radius: 8px; margin-bottom: 1.5rem; }
-        .alert-error { background: rgba(220,53,69,0.15); border: 1px solid rgba(220,53,69,0.3); color: #ff6b7a; }
-        .alert-success { background: rgba(40,167,69,0.15); border: 1px solid rgba(40,167,69,0.3); color: #5cdb7a; }
-        .success-content { text-align: center; }
-        .success-content h2 { color: #5cdb7a; margin-bottom: 1rem; }
-        .success-content p { color: #a0a0b0; margin-bottom: 1rem; line-height: 1.6; }
-        .success-content .links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
-        .success-content .links a {
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .btn-admin { background: linear-gradient(135deg, #ffd700, #f0a500); color: #111; }
-        .btn-site { background: #1a1a24; color: #f0f0f0; border: 1px solid #2a2a3a; }
-        .note { text-align: center; color: #6b6b80; font-size: 0.8rem; margin-top: 1rem; }
-        .note code { background: #1a1a24; padding: 2px 6px; border-radius: 4px; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0a0a0f; color: #f0f0f0; font: 16px/1.5 system-ui, sans-serif; }
+        main { width: min(100%, 600px); padding: 32px; background: #13131a; border: 1px solid #2a2a3a; border-radius: 16px; }
+        h1 { margin: 0 0 8px; text-align: center; color: #ffd700; }
+        .sub { margin: 0 0 24px; text-align: center; color: #a0a0b0; }
+        h2 { margin: 24px 0 12px; color: #ffd700; font-size: 1.1rem; }
+        label { display: block; margin: 14px 0 6px; color: #c5c5d0; font-size: .9rem; }
+        input { width: 100%; padding: 12px; border: 1px solid #383848; border-radius: 8px; background: #1a1a24; color: #fff; font: inherit; }
+        input:focus { outline: 2px solid #ffd700; border-color: transparent; }
+        button, .button { display: inline-block; width: 100%; margin-top: 20px; padding: 13px 16px; border: 0; border-radius: 8px; background: linear-gradient(135deg, #ffd700, #f0a500); color: #111; text-align: center; text-decoration: none; font: inherit; font-weight: 700; cursor: pointer; }
+        .notice { margin: 16px 0; padding: 13px 15px; border-radius: 8px; background: #1d1d29; color: #d3d3df; }
+        .error { border: 1px solid #713843; background: #32191e; color: #ffb5bd; }
+        .success { border: 1px solid #27603a; background: #14281a; color: #a9f0b7; }
+        .small { color: #a0a0b0; font-size: .86rem; }
+        code { color: #ffe58a; }
+        @media (max-width: 520px) { main { padding: 22px; } }
     </style>
 </head>
 <body>
-    <div class="install-container">
-        <h1>🇷🇴 FIXED BETS RO</h1>
-        <p class="subtitle">Installation Wizard</p>
-        
-        <?php if ($error): ?>
-        <div class="alert alert-error">❌ <?= $error ?></div>
-        <?php endif; ?>
-        
-        <?php if ($success): ?>
-        <div class="alert alert-success"><?= $success ?></div>
-        <div class="success-content">
-            <h2>🎉 Installation Complete!</h2>
-            <p>
-                Your VIP betting platform is ready.<br>
-                <strong>Delete install.php</strong> for security before using the site.
-            </p>
-            <div class="links">
-                <a href="admin/index.php" class="btn-admin">🔑 Go to Admin Panel</a>
-                <a href="index.php" class="btn-site">🏠 View Site</a>
-            </div>
-            <div class="note">
-                <strong>Important:</strong> Delete the <code>install.php</code> file from your server!
-            </div>
-        </div>
-        <?php elseif ($step === 'done'): ?>
-            <!-- Already handled above -->
-        <?php else: ?>
-        <form method="POST">
-            <h3 style="color: #ffd700; margin-bottom: 1.5rem;">📦 Database Configuration</h3>
-            
-            <div class="form-group">
-                <label>Database Host</label>
-                <input type="text" name="db_host" value="<?= e(getenv('MYSQLHOST') ?: 'localhost') ?>" required>
-            </div>
-            <div class="form-group">
-                <label>Database Name</label>
-                <input type="text" name="db_name" value="fixed_bets_ro" required>
-            </div>
-            <div class="form-group">
-                <label>Database Username</label>
-                <input type="text" name="db_user" value="root" required>
-            </div>
-            <div class="form-group">
-                <label>Database Password</label>
-                <input type="password" name="db_pass" value="<?= e(getenv('MYSQLPASSWORD') ?: '') ?>">
-            </div>
-            
-            <h3 style="color: #ffd700; margin: 1.5rem 0;">👑 Admin Account</h3>
-            
-            <div class="form-group">
-                <label>Admin Username</label>
-                <input type="text" name="admin_user" value="admin" required>
-            </div>
-            <div class="form-group">
-                <label>Admin Password *</label>
-                <input type="text" name="admin_pass" required placeholder="At least 6 characters" minlength="6">
-            </div>
-            <div class="form-group">
-                <label>Admin Email</label>
-                <input type="email" name="admin_email" placeholder="admin@example.com">
-            </div>
-            <div class="form-group">
-                <label>Site URL</label>
-                <input type="url" name="site_url" value="<?= e(getenv('RAILWAY_PUBLIC_DOMAIN') ? 'https://' . getenv('RAILWAY_PUBLIC_DOMAIN') : 'http://localhost:8000') ?>" required>
-            </div>
-            
-            <button type="submit" class="btn">🚀 Install Now</button>
+<main>
+    <h1>FIXED BETS RO</h1>
+    <p class="sub">Installation wizard</p>
+
+    <?php if ($error !== ''): ?>
+        <div class="notice error"><?= installEscape($error) ?></div>
+    <?php endif; ?>
+
+    <?php if ($success): ?>
+        <div class="notice success">Installation complete. Your database and admin account are configured.</div>
+        <p>Sign in at <a href="login.php" style="color:#ffd700">/login.php</a>. After sign-in, admins are sent to <code>/admin/index.php</code>.</p>
+        <p><strong>Delete install.php from your hosting account now.</strong></p>
+        <?php if ($lockWarning): ?><p class="notice error">The automatic installer lock could not be written. Delete install.php immediately.</p><?php endif; ?>
+        <a class="button" href="login.php">Go to login</a>
+    <?php elseif ($installed): ?>
+        <div class="notice success">This installation is locked. Delete install.php from your hosting account.</div>
+        <p>Admin sign-in: <code>/login.php</code>. Admin dashboard: <code>/admin/index.php</code>.</p>
+    <?php else: ?>
+        <div class="notice">Create a MySQL database in your InfinityFree control panel first, then enter its exact host, database name, and username here. This wizard does not create databases.</div>
+        <p class="small">Use an empty database. The installer creates the tables, saves the connection config, and sets the admin password you choose.</p>
+        <form method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="<?= installEscape((string)$_SESSION['install_csrf']) ?>">
+            <h2>MySQL database</h2>
+            <label for="db_host">Database host</label>
+            <input id="db_host" name="db_host" value="<?= installEscape($form['db_host']) ?>" placeholder="sqlNNN.infinityfree.com" required>
+            <label for="db_port">Database port</label>
+            <input id="db_port" name="db_port" type="number" min="1" max="65535" value="<?= installEscape($form['db_port']) ?>" required>
+            <label for="db_name">Database name</label>
+            <input id="db_name" name="db_name" value="<?= installEscape($form['db_name']) ?>" placeholder="epiz_NNNNN_fixed_bets_ro" required>
+            <label for="db_user">Database username</label>
+            <input id="db_user" name="db_user" value="<?= installEscape($form['db_user']) ?>" required>
+            <label for="db_pass">Database password</label>
+            <input id="db_pass" name="db_pass" type="password" autocomplete="new-password" required>
+
+            <h2>Admin account</h2>
+            <label for="admin_user">Admin username</label>
+            <input id="admin_user" name="admin_user" value="<?= installEscape($form['admin_user']) ?>" minlength="3" maxlength="50" required>
+            <label for="admin_pass">Admin password</label>
+            <input id="admin_pass" name="admin_pass" type="password" autocomplete="new-password" minlength="8" required>
+            <label for="admin_pass_confirm">Confirm admin password</label>
+            <input id="admin_pass_confirm" name="admin_pass_confirm" type="password" autocomplete="new-password" minlength="8" required>
+            <label for="admin_email">Admin email (optional)</label>
+            <input id="admin_email" name="admin_email" type="email" value="<?= installEscape($form['admin_email']) ?>">
+
+            <h2>Website</h2>
+            <label for="site_url">Site URL</label>
+            <input id="site_url" name="site_url" type="url" value="<?= installEscape($form['site_url']) ?>" placeholder="https://your-site.page.gd" required>
+            <button type="submit">Install and save configuration</button>
         </form>
-        <?php endif; ?>
-    </div>
-</body>
-</html>
-ut type="url" name="site_url" value="<?= e(getenv('RAILWAY_PUBLIC_DOMAIN') ? 'https://' . getenv('RAILWAY_PUBLIC_DOMAIN') : 'http://localhost:8000') ?>" required>
-            </div>
-            
-            <button type="submit" class="btn">🚀 Install Now</button>
-        </form>
-        <?php endif; ?>
-    </div>
+    <?php endif; ?>
+</main>
 </body>
 </html>
