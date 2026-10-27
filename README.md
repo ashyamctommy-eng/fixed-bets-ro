@@ -1,122 +1,52 @@
 # 🇷🇴 FIXED BETS RO — VIP Betting Platform
 
-## Overview
-A complete VIP betting platform where all user accounts are created and managed exclusively by the Admin. Users receive login credentials from the Admin and cannot self-register.
+A private-access betting platform. Admins create and manage user accounts; users do not self-register.
 
 ## Features
-- 🔐 Admin-only account creation and management
-- ⭐ VIP Access Control (per-user toggle)
-- 🏷️ Unlimited custom status system with icons, colors, and messages
-- 🎯 VIP Games management with results tracking
-- 📢 Announcements system with priority levels
-- 🔔 Personal & Global notification system
-- 👤 User dashboard with restricted access views
-- 📊 Results history with win/loss tracking
-- 💬 Telegram and WhatsApp support integration
-- ⚙️ Full site settings management
-- 🌙 Dark theme with gold accents
-- 📱 Mobile responsive design
+- Admin-managed accounts and VIP access
+- Custom user statuses and access restrictions
+- VIP games and results tracking
+- Announcements and notifications
+- User dashboards, Telegram/WhatsApp support links, and site settings
 
 ## Requirements
 - PHP 8.0+
 - MySQL 5.7+ / MariaDB 10.3+
-- cPanel shared hosting compatible
+- PHP PDO MySQL enabled
 
-## Installation
+## InfinityFree installation
 
-### 🚀 InfinityFree Deploy (Free — 5 minutes)
+1. In the InfinityFree control panel, create a MySQL database. Open its **Details** and keep the exact host, database name, username, and password. InfinityFree database names and usernames include an account prefix.
+2. Upload the project files to htdocs/. The config/ folder must be writable during setup so the wizard can save the database configuration.
+3. Open https://your-domain/install.php and enter the database details, site URL, and the admin username/password you want. Use an empty database; the wizard creates tables but does not create the MySQL database.
+4. When setup completes, sign in at https://your-domain/login.php. Admin accounts are redirected to /admin/index.php.
+5. **Delete install.php from htdocs after setup.** The wizard also writes config/install.lock to block a second install.
 
-**Step 1 — Create Account**
-- Go to [infinityfree.com](https://infinityfree.com) and sign up
-- Verify your email, log into the control panel
+InfinityFree runs PHP itself. start.sh is for the Railway/Apache container setup and is not used on InfinityFree.
 
-**Step 2 — Create MySQL Database**
-- In the control panel → **MySQL Databases**
-- Click **"Create Database"**
-- Enter a name (e.g. `fixed_bets_ro`)
-- Set a **password** and note it down
-- Once created, click **"Details"** — you'll see:
-  - **Host:** `sqlNNN.infinityfree.com`
-  - **Database Name:** `epiz_NNNNN_fixed_bets_ro`
-  - **Username:** `epiz_NNNNN`
+## Admin login routes
+- Sign-in page for both admin and VIP accounts: /login.php
+- Admin dashboard after sign-in: /admin/index.php
 
-**Step 3 — Update config/database.php**
-- Open `config/database.php` in a text editor
-- Scroll to the **MANUAL CONFIG** section
-- Replace the placeholder values with your InfinityFree MySQL details from Step 2
+If the admin password was set during installation, use that password. If you imported sql/schema.sql manually, its seed account is admin / Admin@123; change that password immediately. The InfinityFree installer is the recommended setup method because the SQL file's database name is not automatically prefixed for your account.
 
-**Step 4 — Upload Files**
-- In the InfinityFree control panel → **File Manager**
-- Navigate to `htdocs/`
-- Upload the ZIP file → **Extract**
+## Security notes
+- Passwords are stored as password hashes.
+- The installer rejects an existing users table rather than overwriting a live database.
+- Remove install.php after installing, even though the completed wizard is locked.
+- Keep config/database.php private; the project .htaccess denies direct web access to the config directory.
 
-Or use **FTP** (FileZilla):
-- FTP Host: `ftp.infinityfree.com`
-- Username: your InfinityFree username
-- Password: your InfinityFree password
-- Upload all files to `htdocs/`
+## Project structure
 
-**Step 5 — Import Database**
-- Control panel → **phpMyAdmin**
-- Select your database
-- Click **Import** → Choose File → select `sql/schema.sql`
-- Click **Go**
-
-**Step 6 — Login**
-- Visit `https://your-site.infinityfreeapp.com`
-- **Username:** `admin`
-- **Password:** `Admin@123`
-- **Change password immediately** in Admin → Settings
-
-### ⚡ Install.php (Alternative)
-1. Upload all files except `config/database.php`
-2. Visit `http://yoursite.com/install.php`
-3. Fill in DB details + admin password
-4. Click **Install Now**
-5. **Delete install.php** after completion
-
-### 📦 cPanel Hosting (Manual)
-1. Upload all files to your web server
-2. Create a MySQL database in cPanel
-3. Import `sql/schema.sql` via phpMyAdmin
-4. Edit `config/database.php` with your DB credentials
-5. Login at `/admin/index.php` with `admin` / `Admin@123`
-
-## Security
-- All passwords hashed with bcrypt
-- CSRF protection on all forms
-- SQL injection prevention via prepared statements
-- XSS protection through output escaping
-- Session management with remember-me tokens
-- Role-based access control (Admin vs VIP User)
-- .htaccess protection for sensitive directories
-
-## Default Admin Login
-After install:
-- **Username:** (what you set during install)
-- **Password:** (what you set during install)
-
-Default if using manual schema import:
-- **Username:** admin
-- **Password:** Admin@123
-
-## Directory Structure
-```
+```text
 fixed-bets-ro/
-├── config/          # Configuration files
-├── includes/        # Core includes (auth, header, footer)
-├── admin/           # Admin dashboard pages
-├── user/            # User dashboard pages
-├── api/             # AJAX endpoints
-├── assets/          # CSS, JS, images
-├── sql/             # Database schema
-├── archive/         # Archived files
-├── install.php      # Installation wizard
-├── index.php        # Homepage
-├── login.php        # Login page
-└── .htaccess        # Security rules
-```
-
-## Support
-- Telegram: [@fixedbetsro](https://t.me/fixedbetsro)
-- Email: support@fixedbetsro.com
+├── admin/           # Admin pages
+├── assets/           # CSS, JavaScript, images
+├── config/           # Database, session, and app configuration
+├── includes/         # Authentication and shared UI/functions
+├── sql/schema.sql    # Database schema and manual-import seed data
+├── user/             # VIP user pages
+├── install.php       # One-time installation wizard
+├── login.php         # Shared admin/VIP login page
+└── start.sh          # Railway container startup only
+```text
